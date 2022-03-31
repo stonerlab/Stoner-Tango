@@ -85,7 +85,7 @@ class SCPIProtocol(Raw):
                     err_code=0
                     continue
                 err_code=float(match.groupdict()["code"])
-                err_msg=match.groupdict()["code"]
+                err_msg=match.groupdict()["msg"]
                 print(f"SCPI Error: {error}", file=self._transport.log_debug)
                 errs+=error                
                 time.sleep(self.sleep)

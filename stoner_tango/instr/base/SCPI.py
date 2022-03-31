@@ -6,7 +6,7 @@ Provides a Base Class for SCPI instruments.
 import tango
 from tango.server import run
 from tango.server import Device
-from tango.server import device_property
+from tango.server import device_property, pipe
 
 from stoner_tango.instr.base.transport import GPIBTransport
 from stoner_tango.instr.base.protocol import SCPIProtocol
@@ -82,7 +82,7 @@ class IEEE488_2(Device):
         else:
             self.state=tango.DevState.MOVING
             self.protocol.query("*OPC?")
-            self.steate=tango.DevSta.ON
+            self.steate=tango.DevState.ON
             
     @command
     def sre(self, bits=None):
@@ -111,6 +111,31 @@ class SCPI(IEEE488_2):
         """Construct the SCPI instrument."""
         super().__init__(*args)
         self.protocol = SCPIProtocol(self.transport)
+        
+    @attribute
+    def version(self):
+        """Get the system version number.
+        
+        Returns:
+            str:
+                The version string.
+        """
+        return self.protocol.query("SYST:VERS?")
+    
+    @pipe
+    def next_error(self):
+        """Read the enxt werror message from the queue."""
+        error=self.protocol.query("SYST:ERR:NEXT?")
+        match=self.protocol.err_pat.match(error)
+        if not match:
+            print(f"Unrecognised error response {error}", file=self.log_debug)
+            return "Error",{"code":0,"message":error}
+        err_code=int(match.groupdict()["code"])
+        err_msg=match.groupdict()["msg"]
+        return "Error",{"code":err_code,"message":err_msg}
+        
+    
+    
 
     
         
