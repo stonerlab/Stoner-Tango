@@ -33,7 +33,7 @@ class K24XX(SCPI):
                                             "LLIM": cmd(
                                                 "current_sense_autorange_lowerlimit",
                                                 dtype=float,
-                                                descrption="Sense current autoranging lower limit",
+                                                descr="Sense current autoranging lower limit",
                                                 label="Autorange I limit",
                                                 units="A",
                                                 range=(0, 1 - 5e-6),
@@ -44,7 +44,7 @@ class K24XX(SCPI):
                                     "NPLC": cmd(
                                         "current_sense_nlpc",
                                         dtype=float,
-                                        description="Number ofpowerline cycles for current sensing",
+                                        descr="Number ofpowerline cycles for current sensing",
                                         label="I NPLC",
                                         range=(0.01, 10.0),
                                     )

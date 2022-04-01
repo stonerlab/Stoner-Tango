@@ -5,6 +5,7 @@ Decorators to help write tango Devices
 __all__=["attribute","command","cmd","SCPI_attrs"]
 from dataclasses import dataclass
 import numpy as np
+from pprint import pprint
 
 import tango.server as server
 import docstring_parser
@@ -86,10 +87,11 @@ class cmd:
             fread=fread,
             fwrite=fwrite,
             label=self.label,
-            units=self.units,
-            doc=self.desc,
+            unit=self.units,
+            doc=self.descr,
             )
-        setattr(klass,self.cmd,attr)
+        klass.__dict__[self.cmd]=attr
+        pprint(klass.__dict__)
 
 def SCPI_attrs(klass):
     """Modifies a Python Class to transform a summary of attributes into tango controls attributes.
@@ -108,6 +110,7 @@ def SCPI_attrs(klass):
 
 def _process_one(klass,scpi_attr, stem=""):
     """Recursively work through the scpi_attrs attribute to add scpi commands as tango controls attributes."""
+    print(scpi_attr)
     if isinstance(scpi_attr, dict): #List of new sub stems
         for sub_stem in scpi_attr:
             _process_one(klass,scpi_attr[sub_stem],f"{stem}:{sub_stem}")
