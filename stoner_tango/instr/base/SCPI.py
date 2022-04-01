@@ -60,7 +60,7 @@ class IEEE488_2(Device):
     #### Implement IEEE488.2 Commands
     
     @command
-    def resst(self):
+    def reset(self):
         """Reset the instrument to defaults."""
         self.protocol.write("*RST")
         
@@ -69,23 +69,30 @@ class IEEE488_2(Device):
         """Issue a CLS command to clear register bits and error queue."""
         self.protocol.write("*CLS")
         
-    @command
-    def opc(self, set=None):
+    @attribute
+    def opc(self):
         """Set the operation complete bit or waits for the current operation to complete.
         
         Args:
             set (bool):
                 If true, set the OPC bit on completion, else do a query command.
+                
+        Returns:
+            bool:
+                Truie if operation complete
         """
+        self.state=tango.DevState.MOVING
+        self.protocol.query("*OPC?")
+        self.steate=tango.DevState.ON
+
+    @opc.write
+    def opc(self,set):
         if set:
             self.protocol.write("*OPC")
-        else:
-            self.state=tango.DevState.MOVING
-            self.protocol.query("*OPC?")
-            self.steate=tango.DevState.ON
+
             
-    @command
-    def sre(self, bits=None):
+    @attribute
+    def sre(self):
         """Set or read the service request enable mask.
         
         Args:
@@ -96,11 +103,13 @@ class IEEE488_2(Device):
             int:
                 Service request ebable mask.
         """
-        if bits is not None and bits>=0:
-            bits=int(bits)
-            self.protocol.write(f"*SRE {bits%256}")
-            return bits%256
         return  int(self.protocol.query("*SRE?"))
+    
+    @sre.write
+    def sre(self,bits):
+        bits=int(bits)
+        self.protocol.write(f"*SRE {bits%256}")
+        return bits%256
         
         
 class SCPI(IEEE488_2):
@@ -134,8 +143,119 @@ class SCPI(IEEE488_2):
         err_msg=match.groupdict()["msg"]
         return "Error",{"code":err_code,"message":err_msg}
         
+    @attribute
+    def operation_status_enable(self):
+        """Read/write the operational status enable register.
+        
+        Args:
+            mask (int):
+                Bitwise mask to set.
+                
+        Returns:
+            int:
+                Bitwise mask set
+        """
+        return int(self.protocol.query("STAT:OPER:ENAB?"))
     
+    @operation_status_enable.write
+    def operation_status_enable(self, mask):
+        self.protocol.write(f"STAT:OPER:ENAB {mask:d}")
+        
+    @attribute
+    def operation_status_condition(self):
+        """Read the operational status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:OPER:COND?"))
+   
+    @attribute
+    def operation_status_event(self):
+        """Read the operational status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:OPER:EVENT?"))
+
+    @attribute
+    def measurement_status_enable(self):
+        """Read/write the measuremental status enable register.
+        
+        Args:
+            mask (int):
+                Bitwise mask to set.
+                
+        Returns:
+            int:
+                Bitwise mask set
+        """
+        return int(self.protocol.query("STAT:MEAS:ENAB?"))
     
+    @measurement_status_enable.write
+    def measurement_status_enable(self, mask):
+        self.protocol.write(f"STAT:MEAS:ENAB {mask:d}")
+        
+    @attribute
+    def measurement_status_condition(self):
+        """Read the measuremental status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:MEAS:COND?"))
+   
+    @attribute
+    def measurement_status_event(self):
+        """Read the measuremental status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:MEAS:EVENT?"))    
+    
+    @attribute
+    def questionable_status_enable(self):
+        """Read/write the questionableal status enable register.
+        
+        Args:
+            mask (int):
+                Bitwise mask to set.
+                
+        Returns:
+            int:
+                Bitwise mask set
+        """
+        return int(self.protocol.query("STAT:QUES:ENAB?"))
+    
+    @questionable_status_enable.write
+    def questionable_status_enable(self, mask):
+        self.protocol.write(f"STAT:QUES:ENAB {mask:d}")
+        
+    @attribute
+    def questionable_status_condition(self):
+        """Read the questionableal status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:QUES:COND?"))
+   
+    @attribute
+    def questionable_status_event(self):
+        """Read the questionableal status condition register.
+        
+        Returns:
+            int:
+                Bitwise value from the condtion register.
+        """
+        return int(self.protocol.query("STAT:QUES:EVENT?"))    
 
     
         
