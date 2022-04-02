@@ -8,6 +8,7 @@ import numpy as np
 from pprint import pprint
 
 import tango.server as server
+from tango.attr_data import AttrData
 import docstring_parser
 
 def attribute(f, **kargs):
@@ -69,7 +70,7 @@ class cmd:
     label:str=""
     units:str=""
 
-    def create_attr(self,klass,scpi_cmd):
+    def create_attr(self,obj,scpi_cmd):
         """Create and return a tango controls attribute from this data class."""
         if self.read:
             def fread(dev):
@@ -81,44 +82,13 @@ class cmd:
                 dev.protocol.write(f"{scpi_cmd} {value}")
         else:
             fwrite=None
-        attr=server.attribute(
-            name=self.cmd,
-            dtype=self.dtype,
-            fread=fread,
-            fwrite=fwrite,
-            label=self.label,
-            unit=self.units,
-            doc=self.descr,
-            )
-        klass.__dict__[self.cmd]=attr
-        pprint(klass.__dict__)
 
-def SCPI_attrs(klass):
-    """Modifies a Python Class to transform a summary of attributes into tango controls attributes.
-
-    The class should have a class atribute scpi_attrs which should be a list of:
-
-        - dictionaries, the keys of which are part of a scpi command and the values are thmeselves scpi_attrs, or
-        - a list of things that might be scpi_attrs, or
-        - an instance of the dataclass :py:class:`cmd` which defines information with which to construct tango
-        device attributes that read and/or write values to the instrument as SCPI commands.
-    """
-    scpi_attrs=getattr(klass,"scpi_attrs",[])
-    for scpi_attr in scpi_attrs:
-        _process_one(klass,scpi_attr)
-    return klass
-
-def _process_one(klass,scpi_attr, stem=""):
-    """Recursively work through the scpi_attrs attribute to add scpi commands as tango controls attributes."""
-    print(scpi_attr)
-    if isinstance(scpi_attr, dict): #List of new sub stems
-        for sub_stem in scpi_attr:
-            _process_one(klass,scpi_attr[sub_stem],f"{stem}:{sub_stem}")
-    elif isinstance(scpi_attr, list):
-        for sub_stem in scpi_attr:
-            _process_one(klass,sub_stem,stem)
-    elif isinstance(scpi_attr, cmd):
-        scpi_attr.create_attr(klass,stem)
-    else:
-        raise SyntaxError(f"Cannot understand how to use {type(scpi_attr)} to make scpi attrobutes")
-
+        attr=AttrData.from_dict({
+            "name":self.cmd,
+            "dtype":self.dtype,
+            "fread":fread,
+            "fwrite":fwrite,
+            "label":self.label,
+            "unit":self.units,
+            "doc":self.desc,})
+        obj.add_attrbute(attr,fread=fread,frwrite=fwrite)
