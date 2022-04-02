@@ -5,8 +5,10 @@ Decorators to help write tango Devices
 __all__=["attribute","command","cmd","SCPI_attrs"]
 from dataclasses import dataclass
 import numpy as np
+import sys
 from pprint import pprint
 
+import tango
 import tango.server as server
 from tango.attr_data import AttrData
 import docstring_parser
@@ -73,20 +75,14 @@ class cmd:
     def create_attr(self,obj,scpi_cmd):
         """Create and return a tango controls attribute from this data class."""
         if self.read:
-            def fread(dev):
-                return self.dtype(dev.protocol.query(f"{scpi_cmd}?"))
+            def fread():
+                return self.dtype(obj.protocol.query(f"{scpi_cmd}?"))
         else:
             fread=None
         if self.write:
-            def fwrite(dev, value):
-                dev.protocol.write(f"{scpi_cmd} {value}")
+            def fwrite(value):
+                obj.protocol.write(f"{scpi_cmd} {value}")
         else:
             fwrite=None
-
-        attr=AttrData.from_dict({
-            "name":self.cmd,
-            "dtype":self.dtype,
-            "label":self.label,
-            "unit":self.units,
-            "doc":self.descr,})
+        attr=tango.AttrData.from_dict({"name":self.cmd, "dtype":tango.utils.TO_TANGO_TYPE[self.dtype],"unit":self.units, "fget":fread})
         obj.add_attribute(attr,r_meth=fread,w_meth=fwrite)
