@@ -5,7 +5,7 @@ Tango driver for a Keithley 24xx based on a SCPI device
 from tango.server import device_property, server_run
 
 from stoner_tango.instr.base.SCPI import SCPI
-from stoner_tango.util.decorators import command, attribute, cmd, SCPI_attrs
+from stoner_tango.util.decorators import command, attribute, cmd
 
 
 class K24XX(SCPI):

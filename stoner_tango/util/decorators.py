@@ -86,9 +86,7 @@ class cmd:
         attr=AttrData.from_dict({
             "name":self.cmd,
             "dtype":self.dtype,
-            "fread":fread,
-            "fwrite":fwrite,
             "label":self.label,
             "unit":self.units,
-            "doc":self.desc,})
-        obj.add_attrbute(attr,fread=fread,frwrite=fwrite)
+            "doc":self.descr,})
+        obj.add_attribute(attr,r_meth=fread,w_meth=fwrite)
