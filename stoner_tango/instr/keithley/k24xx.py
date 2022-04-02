@@ -8,7 +8,6 @@ from stoner_tango.instr.base.SCPI import SCPI
 from stoner_tango.util.decorators import command, attribute, cmd, SCPI_attrs
 
 
-@SCPI_attrs
 class K24XX(SCPI):
 
     """Tango server class for a Keithley 24xx Source Meter."""
