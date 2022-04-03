@@ -76,6 +76,7 @@ class cmd:
         """Create and return a tango controls attribute from this data class."""
         if self.read:
             def fread():
+                assert False
                 return self.dtype(obj.protocol.query(f"{scpi_cmd}?"))
         else:
             fread=None
@@ -84,5 +85,5 @@ class cmd:
                 obj.protocol.write(f"{scpi_cmd} {value}")
         else:
             fwrite=None
-        attr=tango.AttrData.from_dict({"name":self.cmd, "dtype":tango.utils.TO_TANGO_TYPE[self.dtype],"unit":self.units, "fget":fread})
-        obj.add_attribute(attr,r_meth=fread,w_meth=fwrite)
+        attr=tango.AttrData.from_dict({"name":self.cmd, "dtype":tango.utils.TO_TANGO_TYPE[self.dtype],"unit":self.units, "fget":fread,"fset":fwrite})
+        obj.add_attribute(attr)
