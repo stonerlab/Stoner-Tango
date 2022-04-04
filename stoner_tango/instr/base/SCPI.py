@@ -7,10 +7,12 @@ import tango
 from tango.server import run
 from tango.server import Device
 from tango.server import device_property, pipe
+from tango.attr_data import AttrData
 
 from stoner_tango.instr.base.transport import GPIBTransport
 from stoner_tango.instr.base.protocol import SCPIProtocol
-from stoner_tango.util.decorators import command, attribute, cmd
+from stoner_tango.util.decorators import command, attribute
+from stoner_tango.instr.exceptions import CommandError
 
 class IEEE488_2(Device):
 
@@ -62,28 +64,36 @@ class IEEE488_2(Device):
     @command
     def reset(self):
         """Reset the instrument to defaults."""
-        self.protocol.write("*RST")
+        try:
+            self.protocol.write("*RST")
+        except CommandError:
+            self.state=tango.DevState.ALARM
+        else:
+            self.state=tango.DevState.ON
+            self.status="Instrument reset"
 
     @command
     def cls(self):
         """Issue a CLS command to clear register bits and error queue."""
-        self.protocol.write("*CLS")
+        try:
+            self.protocol.write("*CLS")
+        except CommandError:
+            self.state=tango.DevState.ALARM
+        else:
+            self.state=tango.DevState.ON
+            self.status="Instrument cleared"
 
     @attribute
     def opc(self):
         """Set the operation complete bit or waits for the current operation to complete.
 
-        Args:
-            set (bool):
-                If true, set the OPC bit on completion, else do a query command.
-
         Returns:
-            bool:
-                Truie if operation complete
+            bool: Operation Complete
         """
         self.state=tango.DevState.MOVING
         self.protocol.query("*OPC?")
         self.steate=tango.DevState.ON
+        return True
 
     @opc.write
     def opc(self,set):
@@ -95,13 +105,9 @@ class IEEE488_2(Device):
     def sre(self):
         """Set or read the service request enable mask.
 
-        Args:
-            bits (int):
-                If not None, mask to set the service request enable with.
-
         Returns:
             int:
-                Service request ebable mask.
+                SRQ Enable
         """
         return  int(self.protocol.query("*SRE?"))
 
@@ -118,41 +124,9 @@ class SCPI(IEEE488_2):
 
     def __init__(self,*args, **kargs):
         """Construct the SCPI instrument.
-
-        This will look for an attribute scpi_attrs which is a mapping between the SCPI commands and tango attributes.
-
-        scpi_attrs =
-            [{"ROOT":[
-                {"STEM":[
-                    {"LEAF":cmd(....)},
-                    cmd(...)]},
-                {"STEM2":cmd(....write=False)}]},
-             {"ROOT2":cmd(...,read=False)}
-            ]
-
-        defines tango attriobutes for the SCPI commands:
-            ROOT:STEN:LEAF
-            ROOT:STEM:LEAF?
-            ROOT:STEN2?
-            ROOT2
         """
         super().__init__(*args)
         self.protocol = SCPIProtocol(self.transport)
-        for scpi_attr in self.get_scpi_attrs():
-            self._process_one(scpi_attr)
-
-    def _process_one(self,scpi_attr, stem=""):
-        """Recursively work through the scpi_attrs attribute to add scpi commands as tango controls attributes."""
-        if isinstance(scpi_attr, dict): #List of new sub stems
-            for sub_stem in scpi_attr:
-                self._process_one(scpi_attr[sub_stem],f"{stem}:{sub_stem}")
-        elif isinstance(scpi_attr, list):
-            for sub_stem in scpi_attr:
-                self._process_one(sub_stem,stem)
-        elif isinstance(scpi_attr, cmd):
-            scpi_attr.create_attr(self,stem)
-        else:
-            raise SyntaxError(f"Cannot understand how to use {type(scpi_attr)} to make scpi attrobutes")
 
     @attribute
     def version(self):
@@ -160,7 +134,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             str:
-                The version string.
+                Version
         """
         return self.protocol.query("SYST:VERS?")
 
@@ -180,13 +154,9 @@ class SCPI(IEEE488_2):
     def operation_status_enable(self):
         """Read/write the operational status enable register.
 
-        Args:
-            mask (int):
-                Bitwise mask to set.
-
         Returns:
             int:
-                Bitwise mask set
+                Op Status Emable
         """
         return int(self.protocol.query("STAT:OPER:ENAB?"))
 
@@ -200,7 +170,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                OP Status condition
         """
         return int(self.protocol.query("STAT:OPER:COND?"))
 
@@ -210,7 +180,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                OP Status Event
         """
         return int(self.protocol.query("STAT:OPER:EVENT?"))
 
@@ -218,13 +188,9 @@ class SCPI(IEEE488_2):
     def measurement_status_enable(self):
         """Read/write the measuremental status enable register.
 
-        Args:
-            mask (int):
-                Bitwise mask to set.
-
         Returns:
             int:
-                Bitwise mask set
+                Measurement Status Enable
         """
         return int(self.protocol.query("STAT:MEAS:ENAB?"))
 
@@ -238,7 +204,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                Measurement Status Condition
         """
         return int(self.protocol.query("STAT:MEAS:COND?"))
 
@@ -248,7 +214,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                Measurement Status Event
         """
         return int(self.protocol.query("STAT:MEAS:EVENT?"))
 
@@ -256,13 +222,9 @@ class SCPI(IEEE488_2):
     def questionable_status_enable(self):
         """Read/write the questionableal status enable register.
 
-        Args:
-            mask (int):
-                Bitwise mask to set.
-
         Returns:
             int:
-                Bitwise mask set
+                Questionable Event Status Enable
         """
         return int(self.protocol.query("STAT:QUES:ENAB?"))
 
@@ -276,7 +238,7 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                uestionable Event Status Condition
         """
         return int(self.protocol.query("STAT:QUES:COND?"))
 
@@ -286,15 +248,13 @@ class SCPI(IEEE488_2):
 
         Returns:
             int:
-                Bitwise value from the condtion register.
+                uestionable Event Status Occurance
         """
         return int(self.protocol.query("STAT:QUES:EVENT?"))
 
     def get_scpi_attrs(self):
         """Get a list of SCPI commands to be converted to attributes."""
         return getattr(self,"scpi_attrs",[])
-
-
 
 
 if __name__=="__main__":

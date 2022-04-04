@@ -7,22 +7,73 @@ from dataclasses import dataclass
 import numpy as np
 import sys
 from pprint import pprint
+import re
+from asteval import Interpreter
 
 import tango
 import tango.server as server
-from tango.attr_data import AttrData
 import docstring_parser
 
+interp=Interpreter(usersyms=tango.__dict__,use_numpy=True)
+range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
+warn_pat=re.compile(r'warn\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
+alarm_pat=re.compile(r'alarm\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
+return_pat=re.compile(r'((?P<label>.*)\s+in\s+(?P<unit>.*))|(?P<label2>.*)')
+
 def attribute(f, **kargs):
-    """Produces a tnago controls Device attribute using information from a docstring."""
+    """Produces a tnago controls Device attribute using information from a docstring.
+    
+    This supplements the tango.server.attribute decorator by filling in as much detail
+    as it can from the docstring in order to make this more pythonic.    
+    Expect a docstring of the format::
+        
+    attribute doc string.
+    
+    Long descriptions
+    Range (low,high)
+    Warn (low,high)
+    Alarm (low,high)
+    
+    Returns:
+        dtype: Label in units.
+    """
     dp=docstring_parser.parse(f.__doc__)
     annotations=f.__annotations__
     if dp.short_description:
         kargs.setdefault("doc",dp.short_description)
-    if dp.returns:
-        kargs.setdefault("dtype",dp.returns.type_name)
     if "return" in annotations:
-        kargs.setdefault(annotations["return"])
+        kargs.setdefault("dtype",annotations["return"])
+    if dp.returns:
+        kargs.setdefault("dtype",interp.eval(dp.returns.type_name))
+    if match:=return_pat.search(dp.returns.description):
+        dct=dict(match.groupdict())
+        if dct["label"] is None:
+            dct["label"]=dct["label2"]
+        if dct["unit"] is not None:
+            kargs.setdefault("unit",dct["unit"])
+            kargs.setdefault("standard_unit",dct["unit"])
+            kargs.setdefault("display_unit",dct["unit"])
+        kargs.setdefault("label",dct["label"])
+            
+    if dp.long_description:
+        for line in dp.long_description.split("\n"):
+            line=line.strip()
+            if match:=range_pat.search(line):
+                low=interp.eval(match.groupdict()["low"])
+                high=interp.eval(match.groupdict()["high"])
+                kargs.setdefault("min_value",low)
+                kargs.setdefault("max_value",high)
+            if match:=warn_pat.search(line):
+                low=interp.eval(match.groupdict()["low"])
+                high=interp.eval(match.groupdict()["high"])
+                kargs.setdefault("min_warning",low)
+                kargs.setdefault("max_warning",high)
+            if match:=alarm_pat.search(line):
+                low=interp.eval(match.groupdict()["low"])
+                high=interp.eval(match.groupdict()["high"])
+                kargs.setdefault("min_alarm",low)
+                kargs.setdefault("max_alarm",high)
+                
     return server.attribute(f,**kargs)
 
 
@@ -60,30 +111,3 @@ def command(f, dtype_in=None,
                           green_mode=green_mode)
 
 
-@dataclass
-class cmd:
-
-    cmd:str
-    dtype:type
-    read:bool=True
-    write:bool=True
-    descr:str=""
-    range:tuple=(-np.inf,np.inf)
-    label:str=""
-    units:str=""
-
-    def create_attr(self,obj,scpi_cmd):
-        """Create and return a tango controls attribute from this data class."""
-        if self.read:
-            def fread():
-                assert False
-                return self.dtype(obj.protocol.query(f"{scpi_cmd}?"))
-        else:
-            fread=None
-        if self.write:
-            def fwrite(value):
-                obj.protocol.write(f"{scpi_cmd} {value}")
-        else:
-            fwrite=None
-        attr=tango.AttrData.from_dict({"name":self.cmd, "dtype":tango.utils.TO_TANGO_TYPE[self.dtype],"unit":self.units, "fget":fread,"fset":fwrite})
-        obj.add_attribute(attr)
