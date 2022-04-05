@@ -3,15 +3,19 @@
 Provides a Base Class for SCPI instruments.
 """
 
+from pprint import pformat
+
 import tango
 from tango.server import run
 from tango.server import Device
-from tango.server import device_property, pipe
+from tango.server import device_property
 from tango.attr_data import AttrData
+from tango.utils import TO_TANGO_TYPE
 
 from stoner_tango.instr.base.transport import GPIBTransport
 from stoner_tango.instr.base.protocol import SCPIProtocol
-from stoner_tango.util.decorators import command, attribute
+from stoner_tango.util.decorators import command, attribute, pipe
+from stoner_tango.util import Command, sfmt
 from stoner_tango.instr.exceptions import CommandError
 
 class IEEE488_2(Device):
@@ -58,6 +62,17 @@ class IEEE488_2(Device):
         """
         return self.protocol.query("*IDN?")
 
+
+    @attribute
+    def dict(self)->str:
+        """Return the current objects dictionary.
+        
+        Returns:
+            str:
+                __dict__
+        """
+        return pformat(self.__class__.__dict__)
+        
 
     #### Implement IEEE488.2 Commands
 
@@ -127,6 +142,43 @@ class SCPI(IEEE488_2):
         """
         super().__init__(*args)
         self.protocol = SCPIProtocol(self.transport)
+        for item in getattr(self,"scpi_attrs",[]):
+            self._process_one(item)
+            
+    def _process_one(self,item,cmd=""):
+        if isinstance(item, list):
+            for sub_item in item:
+                self._process_one(sub_item,cmd)
+        elif isinstance(item, dict):
+            for key,sub_item in item.items():
+                self._process_one(sub_item,f"{cmd}:{key}")
+        elif isinstance(item,Command):
+            klass=self.__class__
+            r_meth=getattr(klass,f"read_{item.name}", None)
+            w_meth=getattr(klass,f"write_{item.name}", None)
+            if r_meth is None and item.read:
+                def f_read(self):
+                    return item.reader(self.protocol.query(f"{cmd}?"))
+                setattr(klass,f"read_{item.name}",f_read)
+                r_meth=getattr(self,f"read_{item.name}")
+            if w_meth is None and item.write:
+                def f_write(self, value):
+                    self.protocol.write(f"{cmd} {sfmt(value)}")
+                setattr(klass,f"write_{item.name}",f_write)
+                w_meth=getattr(self,f"write_{item.name}")
+            attr=AttrData.from_dict({
+                "name":item.name,
+                "dtype":TO_TANGO_TYPE[item.dtype],
+                "unit":item.unit,
+                "label":item.label,
+                'doc':item.doc,
+                'fget':r_meth if item.read else None,
+                'fset':w_meth if item.write else None,
+                }).to_attr()
+            self._add_attribute(attr, f"read_{item.name}",f"write_{item.name}" , f"is_{item.name}_allowed")
+        else:
+            raise TypeError("Error defining scpi attributes with {item}")
+               
 
     @attribute
     def version(self):
@@ -140,7 +192,11 @@ class SCPI(IEEE488_2):
 
     @pipe
     def next_error(self):
-        """Read the enxt werror message from the queue."""
+        """Read the enxt werror message from the queue.
+        
+        Returns:
+            Ruple[str, List[Dict]: Error Message
+        """
         error=self.protocol.query("SYST:ERR:NEXT?")
         match=self.protocol.err_pat.match(error)
         if not match:
@@ -149,6 +205,27 @@ class SCPI(IEEE488_2):
         err_code=int(match.groupdict()["code"])
         err_msg=match.groupdict()["msg"]
         return "Error",{"code":err_code,"message":err_msg}
+
+    # scpi_attrs=[{"STAT":[
+    #     {"OPER":[
+    #         {"ENAB":Command(name="operational_status_enable",
+    #                         dtype=int,
+    #                         doc="ead/write the operational status enable register.",
+    #                         label="OP Status Enable")},
+    #         {"COND":Command(name="operation_status_condition",
+    #                         dtype=int,
+    #                         doc="Read the operational status condition register.",
+    #                         write=False,
+    #                         label="OP Status condition")},
+    #         {"EVEN":Command(name="operation_status_event",
+    #                         dtype=int,
+    #                         doc="Read the operational status event register.",
+    #                         write=False,
+    #                         label="OP Status event")},
+            
+    #         ]}
+        
+    #     ]}]
 
     @attribute
     def operation_status_enable(self):

@@ -3,7 +3,6 @@
 Decorators to help write tango Devices
 """
 __all__=["attribute","command","cmd","SCPI_attrs"]
-from dataclasses import dataclass
 import numpy as np
 import sys
 from pprint import pprint
@@ -45,15 +44,15 @@ def attribute(f, **kargs):
         kargs.setdefault("dtype",annotations["return"])
     if dp.returns:
         kargs.setdefault("dtype",interp.eval(dp.returns.type_name))
-    if match:=return_pat.search(dp.returns.description):
-        dct=dict(match.groupdict())
-        if dct["label"] is None:
-            dct["label"]=dct["label2"]
-        if dct["unit"] is not None:
-            kargs.setdefault("unit",dct["unit"])
-            kargs.setdefault("standard_unit",dct["unit"])
-            kargs.setdefault("display_unit",dct["unit"])
-        kargs.setdefault("label",dct["label"])
+        if match:=return_pat.search(dp.returns.description):
+            dct=dict(match.groupdict())
+            if dct["label"] is None:
+                dct["label"]=dct["label2"]
+            if dct["unit"] is not None:
+                kargs.setdefault("unit",dct["unit"])
+                kargs.setdefault("standard_unit",dct["unit"])
+                kargs.setdefault("display_unit",dct["unit"])
+            kargs.setdefault("label",dct["label"])
             
     if dp.long_description:
         for line in dp.long_description.split("\n"):
@@ -76,6 +75,28 @@ def attribute(f, **kargs):
                 
     return server.attribute(f,**kargs)
 
+def pipe(f, **kargs):
+    """Produces a tnago controls Device pipe using information from a docstring.
+    
+    This supplements the tango.server.pipe decorator by filling in as much detail
+    as it can from the docstring in order to make this more pythonic.    
+    Expect a docstring of the format::
+        
+    pipe doc string.
+       
+    Returns:
+        dtype: Label
+    """
+    dp=docstring_parser.parse(f.__doc__)
+    if dp.short_description:
+        kargs.setdefault("doc",dp.short_description)
+    if dp.returns:
+        if match:=return_pat.search(dp.returns.description):
+            dct=dict(match.groupdict())
+            if dct["label"] is None:
+                dct["label"]=dct["label2"]
+            kargs.setdefault("label",dct["label"])
+    return server.pipe(f,**kargs)
 
 def command(f, dtype_in=None,
             dformat_in=None,
