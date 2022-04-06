@@ -1,22 +1,27 @@
-__all__=["decorators","sfmt","sbool","Command"]
+__all__=["decorators","fuuncs", "sfmt","sbool","Command"]
 import sys
 from typing import Any
-from dataclasses import dataclass, field, make_dataclass
+from dataclasses import make_dataclass
 
 from tango.utils import TO_TANGO_TYPE
 
 from . import decorators
+from.funcs import sfmt,sbool
+from .decorators import Command
 
-FROM_TANGO_TYPE={v:k for k,v in TO_TANGO_TYPE.items()}
+FROM_TANGO_TYPE={}
+for k,v in TO_TANGO_TYPE.items():
+    if not isinstance(k,str) and "tango" not in k.__class__.__module__:
+        FROM_TANGO_TYPE[v]=k
 
 __module__=sys.modules[__name__]
 
-def convert(arg):
+def convert(arg, to_tango=False):
     """Try to convert the argument to/from a tango type."""
-    if arg in TO_TANGO_TYPE:
-        return TO_TANGO_TYPE[arg]
-    if arg in FROM_TANGO_TYPE:
-        return FROM_TANGO_TYPE[arg]
+    maps=TO_TANGO_TYPE,FROM_TANGO_TYPE if to_tango else FROM_TANGO_TYPE, TO_TANGO_TYPE
+    for mapping in maps:
+        if arg in mapping:
+            return mapping[arg]
     raise TypeError(f"Do not know how to convert type {arg}")
     
 def build_class(pipe_arg):
@@ -27,8 +32,9 @@ def build_class(pipe_arg):
     # Build a data dictionary and fields list
     if isinstance(definition,list): #Long format
         for fld in definition:
-            data[fld["name"]]=fld["value"]
-            fields.append((fld["name"],convert(fld["dtype"])))
+            typ=convert(fld["dtype"])
+            fields.append((fld["name"],typ))
+            data[fld["name"]]=typ(fld["value"])
     elif isinstance(definition, dict): # Compact format
         for fld,value in definition.items():
             data[fld]=value
@@ -42,37 +48,3 @@ def build_class(pipe_arg):
     return cls(**data)
         
 
-def sfmt(value:Any)->str:
-    """Fomat the value depending on the type."""
-    if isinstance(value,bool):
-        return "ON" if value else "OFF"
-    if isinstance(value,float):
-        return f"{value:.6f}"
-    if isinstance(value,str):
-        return f'"{value}"'
-    return f"{value}"
-
-def sbool(value:Any)->bool:
-    """Convert a value to a boolean."""
-    value=str(value).lower().strip()
-    return value in ["1","yes","on","true","t","y"]
-
-@dataclass
-class Command:
-    
-    name:str
-    dtype:type
-    doc:str=""
-    label:str=""
-    unit:str=""
-    read:bool=True
-    write:bool=True
-    reader:callable=None
-    
-    def __inti__(self,*args,**kargs):
-        super().__init__(*args, **kargs)
-        if self.reader is None:
-            if issubclass(self.dtype,bool):
-                self.reader=sbool
-            else:
-                self.reader=self.dtype

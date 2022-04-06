@@ -5,13 +5,26 @@ Tango driver for a Keithley 24xx based on a SCPI device
 from tango.server import device_property, server_run
 
 from stoner_tango.instr.base.SCPI import SCPI
-from stoner_tango.util.decorators import command, attribute
+from stoner_tango.util.decorators import command, attribute, SCPI_Instrument, Command
 from stoner_tango.util import sfmt, sbool
 
-
+@SCPI_Instrument
 class K24XX(SCPI):
 
     """Tango server class for a Keithley 24xx Source Meter."""
+    
+    scpi_attrs=[
+        {"DISP":[
+            {"ENAB":Command(name="display_on", dtype=bool, label="Display On", doc="Enabel the front panel display")},
+            {"WIND1":[
+                {"TEXT":[
+                    {"DATA":Command(name="display_line1_text", dtype=str, label="Display top line", doc="Text to display in line 1")},
+                    {"STAT":Command(name="display_line1_message", dtype=bool, label="Display top line on", doc="Turn the top line to display custom message")}
+                    ]},
+                {"ATTR":Command(name="display_blink_line1", dtype=int, label="Diplay top line blinking", doc="Enable blinking on top line")}
+                ]}
+            ]}
+        ]
     
     @attribute
     def I_sense_range(self):

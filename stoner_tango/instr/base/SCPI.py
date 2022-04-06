@@ -72,6 +72,16 @@ class IEEE488_2(Device):
                 __dict__
         """
         return pformat(self.__class__.__dict__)
+
+    @attribute
+    def tango_dict(self)->str:
+        """Return the current objects dictionary.
+        
+        Returns:
+            str:
+                __dict__
+        """
+        return pformat(getattr(self.__class__,"TangoClassClass").__dict__)
         
 
     #### Implement IEEE488.2 Commands
@@ -141,44 +151,7 @@ class SCPI(IEEE488_2):
         """Construct the SCPI instrument.
         """
         super().__init__(*args)
-        self.protocol = SCPIProtocol(self.transport)
-        for item in getattr(self,"scpi_attrs",[]):
-            self._process_one(item)
-            
-    def _process_one(self,item,cmd=""):
-        if isinstance(item, list):
-            for sub_item in item:
-                self._process_one(sub_item,cmd)
-        elif isinstance(item, dict):
-            for key,sub_item in item.items():
-                self._process_one(sub_item,f"{cmd}:{key}")
-        elif isinstance(item,Command):
-            klass=self.__class__
-            r_meth=getattr(klass,f"read_{item.name}", None)
-            w_meth=getattr(klass,f"write_{item.name}", None)
-            if r_meth is None and item.read:
-                def f_read(self):
-                    return item.reader(self.protocol.query(f"{cmd}?"))
-                setattr(klass,f"read_{item.name}",f_read)
-                r_meth=getattr(self,f"read_{item.name}")
-            if w_meth is None and item.write:
-                def f_write(self, value):
-                    self.protocol.write(f"{cmd} {sfmt(value)}")
-                setattr(klass,f"write_{item.name}",f_write)
-                w_meth=getattr(self,f"write_{item.name}")
-            attr=AttrData.from_dict({
-                "name":item.name,
-                "dtype":TO_TANGO_TYPE[item.dtype],
-                "unit":item.unit,
-                "label":item.label,
-                'doc':item.doc,
-                'fget':r_meth if item.read else None,
-                'fset':w_meth if item.write else None,
-                }).to_attr()
-            self._add_attribute(attr, f"read_{item.name}",f"write_{item.name}" , f"is_{item.name}_allowed")
-        else:
-            raise TypeError("Error defining scpi attributes with {item}")
-               
+        self.protocol = SCPIProtocol(self.transport)               
 
     @attribute
     def version(self):

@@ -2,16 +2,16 @@
 """
 Decorators to help write tango Devices
 """
-__all__=["attribute","command","cmd","SCPI_attrs"]
-import numpy as np
-import sys
-from pprint import pprint
+__all__=["attribute","command","Command","SCPI_Instrument"]
 import re
 from asteval import Interpreter
+from dataclasses import dataclass
 
 import tango
 import tango.server as server
 import docstring_parser
+
+from .funcs import sfmt, sbool
 
 interp=Interpreter(usersyms=tango.__dict__,use_numpy=True)
 range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
@@ -131,4 +131,69 @@ def command(f, dtype_in=None,
                           polling_period=polling_period,
                           green_mode=green_mode)
 
+@dataclass
+class Command:
+    
+    name:str
+    dtype:type
+    doc:str=""
+    label:str=""
+    unit:str=""
+    read:bool=True
+    write:bool=True
+    reader:callable=None
+    
+    def __init__(self,*args,**kargs):
+        super().__init__()
+        if self.reader is None:
+            if issubclass(self.dtype,bool):
+                self.reader=sbool
+            else:
+                self.reader=self.dtype
+
+
+def SCPI_Instrument(cls):
+    
+    """Another attempt to add attributes to a class based on a lookup table."""
+    
+    for item in getattr(cls,"scpi_attrs",[]):
+        _process_one(cls, item)
+    return server.DeviceMeta(cls.__name__, (cls,), {})
+
+        
+def _process_one(cls,item,cmd=""):
+    if isinstance(item, list):
+        for sub_item in item:
+            _process_one(cls,sub_item,cmd)
+    elif isinstance(item, dict):
+        for key,sub_item in item.items():
+            _process_one(cls, sub_item,f"{cmd}:{key}")
+    elif isinstance(item,Command):
+        access=None
+        if item.read:
+            def f_read(self):
+                assert False, item.reader
+                return item.reader(self.protocol.query(f"{cmd}?"))
+            setattr(cls,f"read_{item.name}",f_read)
+            access=tango.AttrWriteType.READ
+            fget=f"read_{item.name}"
+        else:
+            fget=None
+        if item.write:
+            def f_write(self, value):
+                self.protocol.write(f"{cmd} {sfmt(value)}")
+            setattr(cls,f"write_{item.name}",f_write)
+            access=tango.AttrWriteType.READ_WRITE if item.read else tango.AttrWriteType.WRITE
+            fset=f"write_{item.name}"
+        else:
+            fset=None
+        if access is None:
+            return
+        attr=server.attribute(fget=fget, fset=fset,label=item.label, doc=item.doc, dtype=item.dtype, unit=item.unit)
+        setattr(cls,item.name,attr)
+        #Add also to the TangoClassClass
+
+            
+    else:
+        raise TypeError("Error defining scpi attributes with {item}")
 
