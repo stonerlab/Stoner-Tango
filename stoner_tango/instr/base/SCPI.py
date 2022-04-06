@@ -33,6 +33,7 @@ class IEEE488_2(Device):
         """Construct the device server process."""
         super().__init__(*args)
         self.transport=GPIBTransport(self, name=self.name, sleep=self.sleep)
+        self._debug = False
 
     @property
     def state(self):
@@ -64,25 +65,17 @@ class IEEE488_2(Device):
 
 
     @attribute
-    def dict(self)->str:
-        """Return the current objects dictionary.
-        
-        Returns:
-            str:
-                __dict__
-        """
-        return pformat(self.__class__.__dict__)
+    def debug(self):
+        """Anable debugging log of instrument transactions.
 
-    @attribute
-    def tango_dict(self)->str:
-        """Return the current objects dictionary.
-        
         Returns:
-            str:
-                __dict__
+            bool: Debug On?
         """
-        return pformat(getattr(self.__class__,"TangoClassClass").__dict__)
-        
+        return self._debug
+    
+    @debug.write
+    def debug(self, value):
+        self._debug=bool(value)
 
     #### Implement IEEE488.2 Commands
 

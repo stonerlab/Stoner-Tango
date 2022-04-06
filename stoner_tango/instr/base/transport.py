@@ -243,15 +243,23 @@ class VisaTransport(BaseTransport):
         
     def read(self, bytes:int =-1)->str:
         """Read a single line as a string from an instrument."""
-        return self.resource.read()
+        data =  self.resource.read()
+        if getattr(self._dev,"_debug",False):
+            self.debug(f"{self.name} <- {data}")
+        return data
+
         
     def write(self,data:str)->int:
         """Write a string to the instrument and return the bytes transferred."""
+        if getattr(self._dev,"_debug",False):
+            self.debug(f"{self.name} -> {data}")
         return self.resource.write(data)
         
     def writebytes(self, data:bytes)->int:
         """Write a bytes array to the instrument and return the number of bytes transferred."""
-        return self.resource.write_raw(data)
+        data = self.resource.write_raw(data)
+        return data
+
     
 class GPIBTransport(VisaTransport):
     

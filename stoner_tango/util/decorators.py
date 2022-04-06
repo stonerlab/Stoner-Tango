@@ -3,13 +3,16 @@
 Decorators to help write tango Devices
 """
 __all__=["attribute","command","Command","SCPI_Instrument"]
-import re
 from asteval import Interpreter
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from inspect import getsourcefile
+import pathlib
+import re
+import yaml
 
+import docstring_parser
 import tango
 import tango.server as server
-import docstring_parser
 
 from .funcs import sfmt, sbool
 
@@ -18,6 +21,8 @@ range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.
 warn_pat=re.compile(r'warn\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
 alarm_pat=re.compile(r'alarm\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
 return_pat=re.compile(r'((?P<label>.*)\s+in\s+(?P<unit>.*))|(?P<label2>.*)')
+
+### Replacement decorators for tango.server
 
 def attribute(f, **kargs):
     """Produces a tnago controls Device attribute using information from a docstring.
@@ -131,6 +136,8 @@ def command(f, dtype_in=None,
                           polling_period=polling_period,
                           green_mode=green_mode)
 
+##### Machinery for the SCPI_Insastrument decorator
+
 @dataclass
 class Command:
     
@@ -143,43 +150,161 @@ class Command:
     write:bool=True
     reader:callable=None
     
-    def __init__(self,*args,**kargs):
-        super().__init__()
+    def __post_init__(self):
+        """Set the reader function  properly to handle scpi booleans."""
         if self.reader is None:
             if issubclass(self.dtype,bool):
                 self.reader=sbool
             else:
                 self.reader=self.dtype
+                
+    def to_dict(self):
+        """Make a dictionary out of the fields of this class.
+        
+        This method is primarily useful for serialising instances of this class.
+        Mostly the fields are just interpreted as is, but the dype and reader fields
+        are simply given as the string names.
+        
+        The :py:meth:`Command.from_dict` is the inverse of this method.
+        
+        Returns:
+            dict: The Command as a dictionary.
+        """
+        out={}
+        for f in fields(self):
+            out[f.name]=getattr(self,f.name)
+        out["dtype"]=out["dtype"].__name__
+        out["reader"]=out["reader"].__name__
+        return out
+    
+    @classmethod
+    def from_dict(cls, dct, symbols):
+        """Build a class instance from a dictionary.
+        
+        Args:
+            dct (dict):
+                Dictionary containing the field data.
+            symbols (dict):
+                Additional symbols to use when reconstructing the dtype and reader fields.
+                
+        Returns:
+            Command:
+                A new instance of this class.
+        """
+        interp.symtable.update(symbols)
+        fieldnames=set([f.name for f in fields(cls)])
+        names=set(list(dct.keys()))
+        new_dct={}
+        for name in fieldnames&names:
+            if name in["dtype","reader"]:
+                new_dct[name]=interp.eval(dct[name])
+            else:
+                new_dct[name]=dct[name]
+        return cls(**new_dct)
+                
+                
+def Command_representer(dumper, data):
+    """Makes a representation for :py:class:`Command` to enable dumping to a yaml file."""
+    return dumper.represent_mapping('!Command', data.to_dict().items(), False)
+   
+def Command_constructor(loader, node):
+    """Reconstruct a :py:class:`Command` instance from a yaml loader node."""
+    mapping = loader.construct_mapping(node)
+    return Command.from_dict(mapping,{"sbool":sbool})
 
-
+yaml.add_representer(Command,Command_representer)
+yaml.add_constructor('!Command', Command_constructor)
+       
 def SCPI_Instrument(cls):
     
-    """Another attempt to add attributes to a class based on a lookup table."""
+    """Construct a set of tango attributes to map to SCPI commands based on infromation in the decorated class.
     
-    for item in getattr(cls,"scpi_attrs",[]):
+    This decorator expects to either find an attribute called *scpi_attrs* in the class definition, or to load
+    a similar data structure from a YAML file with the same name as class and .yaml extension that lives in the same
+    directory as the fiule containing the class.
+    
+    The scpi_attrs attribute is a recursive list and dictionary structure as follows:
+        
+        scpi_attrs=[
+            {"ROOT":[
+                {"BRANCH":[
+                    {"TWIG1":Command(name='attr_nme',
+                                     dtype = python_type,
+                                     label = "Short name",
+                                     unit = 'Units for display",
+                                     read = True|Fale,
+                                     write = True|False,
+                                     doc= 'Longer documentation string')},
+                    {"TWIG2":[ .... ]}
+                    ]},
+                {"BRANCH2":[ ... ]},
+                ]},
+            {"ROOT2": [....]}
+            ]
+        
+    The YAML file has the equivalent structure, wth the Command class be represented with a !Command tag.
+    
+    The decorator will create read_{attr-name} and write_{attr-name} methods that will send the relevant SCPI strings to the
+    instrument and collect the replies, format them using the *reader* entry to convert them to the correct python data type.
+    
+    It then also creates a tango attribute of the same name that uses these read/write methods to make the data available over the 
+    tango Device api. The access mode is determined from the read & write fields of Command (which should reflect whether there is a
+     matching SCPI ? query). The *name* and *dtype* fields of Command are mandetory, default values are prpvided for other fields.
+    
+    Internally the decorator is doing some slightly undocumented things with the tango.server.DataMeta to ensure this actually works!
+    """
+    
+    clspth=pathlib.Path(getsourcefile(cls.__mro__[0])).parent # This is horrible and due to how tango.server.Device works
+    
+    clsyaml=clspth/f"{cls.__name__}.yaml"
+    
+    if not hasattr(cls,"scpi_attrs") and clsyaml.exists:
+        scpi_attrs=yaml.load(clsyaml.read_text(),yaml.FullLoader)
+    else:
+        scpi_attrs=getattr(cls,"scpi_attrs",[])
+    
+    for item in scpi_attrs:
         _process_one(cls, item)
     return server.DeviceMeta(cls.__name__, (cls,), {})
 
         
 def _process_one(cls,item,cmd=""):
+    """Recursive function to be the machinery for the SCPI_Instrument decorator.
+    
+    Args:
+        cls (tango.server.Decice class):
+            The tango.server.Device subclass that we are decorating.
+        item (list|dict|Command):
+            The current bit of the scpi_attr being processed.
+        cmd (str):
+            The current SCPI command path as a string.
+            
+    Raises:
+        TypeError:
+            If item is not a list, dict, or Command instance.
+            
+    Modifies:
+        cls:
+            This will potentially add new attributes to the class being decorated.
+            It's not very careful not to stomp on things - user beware!
+    """
     if isinstance(item, list):
         for sub_item in item:
             _process_one(cls,sub_item,cmd)
     elif isinstance(item, dict):
         for key,sub_item in item.items():
             _process_one(cls, sub_item,f"{cmd}:{key}")
-    elif isinstance(item,Command):
+    elif isinstance(item,Command): # Do the actualy construction of the attribute
         access=None
-        if item.read:
+        if item.read: # Patch in a suitable read function and make a not of its name
             def f_read(self):
-                assert False, item.reader
                 return item.reader(self.protocol.query(f"{cmd}?"))
             setattr(cls,f"read_{item.name}",f_read)
             access=tango.AttrWriteType.READ
             fget=f"read_{item.name}"
         else:
             fget=None
-        if item.write:
+        if item.write: # PAtch in a suitable 
             def f_write(self, value):
                 self.protocol.write(f"{cmd} {sfmt(value)}")
             setattr(cls,f"write_{item.name}",f_write)
@@ -187,13 +312,13 @@ def _process_one(cls,item,cmd=""):
             fset=f"write_{item.name}"
         else:
             fset=None
-        if access is None:
+        if access is None: # Really we should never get here - perhaps this should be an Exception!
             return
+        # Add our attribute now.
+        ### TODO Implement more of the keyword arguments for the attribute - particualrly range, alarm, warn
+        ### TODO need to handle enum types somehowdum
         attr=server.attribute(fget=fget, fset=fset,label=item.label, doc=item.doc, dtype=item.dtype, unit=item.unit)
-        setattr(cls,item.name,attr)
-        #Add also to the TangoClassClass
-
-            
+        setattr(cls,item.name,attr)           
     else:
         raise TypeError("Error defining scpi attributes with {item}")
 

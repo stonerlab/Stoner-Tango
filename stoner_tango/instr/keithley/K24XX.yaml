@@ -1,0 +1,39 @@
+- DISP:
+  - ENAB: !Command
+      name: display_on
+      dtype: bool
+      doc: Enabel the front panel display
+      label: Display On
+      unit: ''
+      read: true
+      write: true
+      reader: sbool
+  - WIND1:
+    - TEXT:
+      - DATA: !Command
+          name: display_line1_text
+          dtype: str
+          doc: Text to display in line 1
+          label: Display top line
+          unit: ''
+          read: true
+          write: true
+          reader: str
+      - STAT: !Command
+          name: display_line1_message
+          dtype: bool
+          doc: Turn the top line to display custom message
+          label: Display top line on
+          unit: ''
+          read: true
+          write: true
+          reader: sbool
+    - ATTR: !Command
+        name: display_blink_line1
+        dtype: int
+        doc: Enable blinking on top line
+        label: Diplay top line blinking
+        unit: ''
+        read: true
+        write: true
+        reader: int
