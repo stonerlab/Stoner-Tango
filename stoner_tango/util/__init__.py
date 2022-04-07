@@ -18,10 +18,9 @@ __module__=sys.modules[__name__]
 
 def convert(arg, to_tango=False):
     """Try to convert the argument to/from a tango type."""
-    maps=TO_TANGO_TYPE,FROM_TANGO_TYPE if to_tango else FROM_TANGO_TYPE, TO_TANGO_TYPE
-    for mapping in maps:
-        if arg in mapping:
-            return mapping[arg]
+    mapping=TO_TANGO_TYPE if to_tango else FROM_TANGO_TYPE
+    if arg in mapping:
+        return mapping[arg]
     raise TypeError(f"Do not know how to convert type {arg}")
     
 def build_class(pipe_arg):
@@ -32,7 +31,7 @@ def build_class(pipe_arg):
     # Build a data dictionary and fields list
     if isinstance(definition,list): #Long format
         for fld in definition:
-            typ=convert(fld["dtype"])
+            typ=convert(fld["dtype"], to_tango=False)
             fields.append((fld["name"],typ))
             data[fld["name"]]=typ(fld["value"])
     elif isinstance(definition, dict): # Compact format

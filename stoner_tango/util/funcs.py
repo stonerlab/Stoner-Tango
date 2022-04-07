@@ -4,7 +4,7 @@ Extra utility functions
 """
 
 __all__=["sbool","sfmt"]
-
+import enum
 from typing import Any
 def sfmt(value:Any)->str:
     """Fomat the value depending on the type."""
@@ -14,6 +14,8 @@ def sfmt(value:Any)->str:
         return f"{value:.6f}"
     if isinstance(value,str):
         return f'"{value}"'
+    if isinstance(value,enum.Enum):
+        return value.name
     return f"{value}"
 
 def sbool(value:Any)->bool:

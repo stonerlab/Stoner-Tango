@@ -9,7 +9,7 @@ from inspect import getsourcefile
 import pathlib
 from pprint import pprint
 import re
-from typing import Optional, Tuple, List
+from typing import Optional, Tuple, List, Union
 import yaml
 
 from asteval import Interpreter
@@ -145,13 +145,14 @@ def command(f, dtype_in=None,
 class Command:
 
     name:str
-    dtype:type
+    dtype:Union[type,enum.Enum]
     doc:str=""
     label:str=""
     unit:str=""
     read:bool=True
     write:bool=True
     reader:callable=None
+    writer:callable=sfmt
     range:Optional[Tuple[float,float]]=None
     alarm:Optional[Tuple[float,float]]=None
     warn:Optional[Tuple[float,float]]=None
@@ -162,13 +163,20 @@ class Command:
         if self.reader is None:
             if issubclass(self.dtype,bool):
                 self.reader=sbool
+            elif issubclass(self.dtype,enum.Enum):
+                def reader(value):
+                    return getattr(self.dtype,value).value
+                self.reader=reader
             else:
                 self.reader=self.dtype
         if issubclass(self.dtype,enum.Enum):
-            self.enum_labels=list(self.dtype.__members__.keys())
-            self.dtype=tango.DevEnum
-
-
+            def writer(value):
+                if isinstance(value,int):
+                    return self.dtype(value).name
+                if isinstance(value,str):
+                    return self.dtype[value]
+                raise ValueError(f"Cannot map {value} into {self.dtype}")
+            self.writer=writer
     def to_dict(self):
         """Make a dictionary out of the fields of this class.
 
@@ -207,7 +215,7 @@ class Command:
         names=set(list(dct.keys()))
         new_dct={}
         for name in fieldnames&names:
-            if name in["dtype","reader"]:
+            if name in["dtype","reader"] and isinstance(dct[name],str):
                 new_dct[name]=interp.eval(dct[name])
             else:
                 new_dct[name]=dct[name]
@@ -228,12 +236,14 @@ def Enum_representer(dumper, data):
     vals={}
     for name in data.__members__:
         vals[name]=getattr(data,name).value
-    return dumper.represent_mapping('!ENUM', {"name":data.__name__,"values":vals}, False)
+    return dumper.represent_mapping('!ENUM', {"name":data.__name__,"values":vals})
 
 def Enum_constructor(loader, node):
     """Reconstruct a :py:class:`Command` instance from a yaml loader node."""
     mapping = loader.construct_mapping(node)
-    return enum.Enum(mapping["name"], mapping["values"].items())
+    labels = list(loader.construct_mapping(node.value[1][1]).items())
+    labels.sort(key=lambda x:x[1])
+    return enum.Enum(mapping["name"], labels)
 
 yaml.add_representer(Command,Command_representer)
 yaml.add_constructor('!Command', Command_constructor)
@@ -283,15 +293,17 @@ def SCPI_Instrument(cls):
 
     clsyaml=clspth/f"{cls.__name__}.yaml"
 
-    if not hasattr(cls,"scpi_attrs") and clsyaml.exists:
+    if "scpi_attrs" not in cls.__dict__ and clsyaml.exists:
         scpi_attrs=yaml.load(clsyaml.read_text(),yaml.FullLoader)
-        setattr(cls,"scpi_attrs", scpi_attrs)
+        defined=getattr(cls,"scpi_attrs",[])
+        defined.extend(scpi_attrs)
+        setattr(cls,"scpi_attrs", defined)
     else:
         scpi_attrs=getattr(cls,"scpi_attrs",[])
 
     for item in scpi_attrs:
         _process_one(cls, item)
-    return server.DeviceMeta(cls.__name__, (cls,), {})
+    return server.DeviceMeta(cls.__name__, cls.__mro__, {})
 
 
 def _process_one(cls,item,cmd=""):
@@ -332,7 +344,7 @@ def _process_one(cls,item,cmd=""):
             fget=None
         if item.write: # PAtch in a suitable
             def f_write(self, value):
-                self.protocol.write(f"{cmd} {sfmt(value)}")
+                self.protocol.write(f"{cmd} {item.writer(value)}")
             setattr(cls,f"write_{item.name}",f_write)
             access=tango.AttrWriteType.READ_WRITE if item.read else tango.AttrWriteType.WRITE
             fset=f"write_{item.name}"

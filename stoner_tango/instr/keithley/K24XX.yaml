@@ -26,6 +26,12 @@
         doc: Enable blinking on top line
         label: Diplay top line blinking
 - SENS:
+  - COMNC:
+    - !Command
+      name: concurrent_measurements
+      dtype: bool
+      doc: Enable concurrent measurements
+      label: Concurrent Measurements
   - CURR:
     - RANG:
       - !Command
@@ -57,6 +63,22 @@
         label: NPLC
         unit: plc
         range: (0.01,10.0)
+    - PROT:
+      - LEV:
+        - !Command
+          name: i_compliance
+          dtype: float
+          doc: The current compliance when operating as a voltage source
+          label: Compliance (I)
+          unit: A
+          range: (1.0E-6,1.0)
+      - TRIP:
+        - !Command
+          name: in_i_compliance
+          dtype: bool
+          ddc: Is the source in current compliance?
+          label: I limited
+          write: False
   - VOLT:
     - RANG:
       - !Command
@@ -88,3 +110,76 @@
         label: NPLC
         unit: plc
         range: (0.01,10.0)
+    - PROT:
+      - LEV:
+        - !Command
+          name: v_compliance
+          dtype: float
+          doc: The voltage compliance when operating as a current source
+          label: Compliance (V)
+          unit: V
+          range: (1.0E-3,105.0)
+      - TRIP:
+        - !Command
+          name: in_v_compliance
+          dtype: bool
+          ddc: Is the source in voltage compliance?
+          label: V Limited
+          write: False
+  - RES:
+    - RANG:
+      - !Command
+        name: r_sense_range
+        dtype: float
+        doc: Range level for resistance measurements.
+        label: R Range
+        unit: Ohm
+        range: (0.0,2E18)
+      - AUTO:
+        - !Command
+          name: r_sense_autorange
+          dtype: bool
+          doc: Auto range for resistance measurements.
+          labels: Autorange R
+        - LLIM:
+          - !Command
+            name: r_sense_autorange_lower_limit
+            dtype: float
+            doc: Lower Limit for autoranging resistance
+            label: R Autorange lower limit
+            unit: Ohm
+            range: (0.0,2E18)
+        - ULIM:
+          - !Command
+            name: r_sense_autorange_upper_limit
+            dtype: float
+            doc: Upper Limit for autoranging resistance
+            label: R Autorange upper limit
+            unit: Ohm
+            range: (0.0,2E18)
+    - NPLC:
+      - !Command
+        name: r_sense_nplc
+        dtype: float
+        doc: Number of power line cycles to measure resistance for.
+        label: NPLC
+        unit: plc
+    - MODE:
+      - !Command
+        name: r_sense_mode
+        dtype: 
+          !ENUM
+          name: R_Sense_Mode
+          values:
+            AUTO: 1
+            MAN: 0
+        doc: Manual or automatic configuration of resistance readings.
+        label: R Sense Mode
+    - OCOM:
+      - !Command
+        name: r_sense_offset_compensation
+        dtype: bool
+        doc: Whether the resistance offset compensation is on or off.
+        label: Offset Compensation
+        
+        

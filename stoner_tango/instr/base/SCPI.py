@@ -146,7 +146,7 @@ class SCPI(IEEE488_2):
         super().__init__(*args)
         self.protocol = SCPIProtocol(self.transport)
 
-    @pipe
+    @tango.server.pipe
     def next_error(self):
         """Read the enxt werror message from the queue.
 
