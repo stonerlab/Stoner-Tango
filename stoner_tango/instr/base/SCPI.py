@@ -14,7 +14,7 @@ from tango.utils import TO_TANGO_TYPE
 
 from stoner_tango.instr.base.transport import GPIBTransport
 from stoner_tango.instr.base.protocol import SCPIProtocol
-from stoner_tango.util.decorators import command, attribute, pipe
+from stoner_tango.util.decorators import command, attribute, pipe, SCPI_Instrument
 from stoner_tango.util import Command, sfmt
 from stoner_tango.instr.exceptions import CommandError
 
@@ -72,7 +72,7 @@ class IEEE488_2(Device):
             bool: Debug On?
         """
         return self._debug
-    
+
     @debug.write
     def debug(self, value):
         self._debug=bool(value)
@@ -135,7 +135,7 @@ class IEEE488_2(Device):
         self.protocol.write(f"*SRE {bits%256}")
         return bits%256
 
-
+@SCPI_Instrument
 class SCPI(IEEE488_2):
 
     """Further wraps the IEEE488.2 Instrument with a SCPI proptocol handler."""
@@ -144,22 +144,12 @@ class SCPI(IEEE488_2):
         """Construct the SCPI instrument.
         """
         super().__init__(*args)
-        self.protocol = SCPIProtocol(self.transport)               
-
-    @attribute
-    def version(self):
-        """Get the system version number.
-
-        Returns:
-            str:
-                Version
-        """
-        return self.protocol.query("SYST:VERS?")
+        self.protocol = SCPIProtocol(self.transport)
 
     @pipe
     def next_error(self):
         """Read the enxt werror message from the queue.
-        
+
         Returns:
             Ruple[str, List[Dict]: Error Message
         """
@@ -172,132 +162,13 @@ class SCPI(IEEE488_2):
         err_msg=match.groupdict()["msg"]
         return "Error",{"code":err_code,"message":err_msg}
 
-    # scpi_attrs=[{"STAT":[
-    #     {"OPER":[
-    #         {"ENAB":Command(name="operational_status_enable",
-    #                         dtype=int,
-    #                         doc="ead/write the operational status enable register.",
-    #                         label="OP Status Enable")},
-    #         {"COND":Command(name="operation_status_condition",
-    #                         dtype=int,
-    #                         doc="Read the operational status condition register.",
-    #                         write=False,
-    #                         label="OP Status condition")},
-    #         {"EVEN":Command(name="operation_status_event",
-    #                         dtype=int,
-    #                         doc="Read the operational status event register.",
-    #                         write=False,
-    #                         label="OP Status event")},
-            
-    #         ]}
-        
-    #     ]}]
-
     @attribute
-    def operation_status_enable(self):
-        """Read/write the operational status enable register.
-
-        Returns:
-            int:
-                Op Status Emable
-        """
-        return int(self.protocol.query("STAT:OPER:ENAB?"))
-
-    @operation_status_enable.write
-    def operation_status_enable(self, mask):
-        self.protocol.write(f"STAT:OPER:ENAB {mask:d}")
-
-    @attribute
-    def operation_status_condition(self):
-        """Read the operational status condition register.
-
-        Returns:
-            int:
-                OP Status condition
-        """
-        return int(self.protocol.query("STAT:OPER:COND?"))
-
-    @attribute
-    def operation_status_event(self):
-        """Read the operational status condition register.
-
-        Returns:
-            int:
-                OP Status Event
-        """
-        return int(self.protocol.query("STAT:OPER:EVENT?"))
-
-    @attribute
-    def measurement_status_enable(self):
-        """Read/write the measuremental status enable register.
-
-        Returns:
-            int:
-                Measurement Status Enable
-        """
-        return int(self.protocol.query("STAT:MEAS:ENAB?"))
-
-    @measurement_status_enable.write
-    def measurement_status_enable(self, mask):
-        self.protocol.write(f"STAT:MEAS:ENAB {mask:d}")
-
-    @attribute
-    def measurement_status_condition(self):
-        """Read the measuremental status condition register.
-
-        Returns:
-            int:
-                Measurement Status Condition
-        """
-        return int(self.protocol.query("STAT:MEAS:COND?"))
-
-    @attribute
-    def measurement_status_event(self):
-        """Read the measuremental status condition register.
-
-        Returns:
-            int:
-                Measurement Status Event
-        """
-        return int(self.protocol.query("STAT:MEAS:EVENT?"))
-
-    @attribute
-    def questionable_status_enable(self):
-        """Read/write the questionableal status enable register.
-
-        Returns:
-            int:
-                Questionable Event Status Enable
-        """
-        return int(self.protocol.query("STAT:QUES:ENAB?"))
-
-    @questionable_status_enable.write
-    def questionable_status_enable(self, mask):
-        self.protocol.write(f"STAT:QUES:ENAB {mask:d}")
-
-    @attribute
-    def questionable_status_condition(self):
-        """Read the questionableal status condition register.
-
-        Returns:
-            int:
-                uestionable Event Status Condition
-        """
-        return int(self.protocol.query("STAT:QUES:COND?"))
-
-    @attribute
-    def questionable_status_event(self):
-        """Read the questionableal status condition register.
-
-        Returns:
-            int:
-                uestionable Event Status Occurance
-        """
-        return int(self.protocol.query("STAT:QUES:EVENT?"))
-
     def get_scpi_attrs(self):
-        """Get a list of SCPI commands to be converted to attributes."""
-        return getattr(self,"scpi_attrs",[])
+        """Get a list of SCPI commands to be converted to attributes.
+
+        Returns:
+            str: SCPI_Attributes"""
+        return pformat(getattr(self,"scpi_attrs",[]))
 
 
 if __name__=="__main__":

@@ -1,0 +1,76 @@
+- STAT:
+  - OPER:
+    - ENAB:
+      - !Command
+        name: operation_status_enable
+        dtype: int
+        doc: Read/write the operational status enable register.
+        label: OP Status Emable
+        range: (0,65535)
+    - COND:
+      - !Command
+        name: operation_status_condition
+        dtype: int
+        doc: Read the operational status condition register.
+        label: OP Status condition
+        write: False
+    - EVEN:
+      - !Command
+        name: operation_status_event
+        dtype: int
+        doc: Read the operational status condition register.
+        label: OP Status Event
+        write: False
+  - MEAS:
+    - ENAB:
+      - !Command
+        name: measurement_status_enable
+        dtype: int
+        doc: Read/write the measurement status enable register.
+        label: Measurement Status Emable
+        range: (0,65535)
+    - COND:
+      - !Command
+        name: measurement_status_condition
+        dtype: int
+        doc: Read the measurement status condition register.
+        label: Measurement Status condition
+        write: False
+    - EVEN:
+      - !Command
+        name: measurement_status_event
+        dtype: int
+        doc: Read the measurement status condition register.
+        label: Measurement Status Event
+        write: False
+  - QUES:
+    - ENAB:
+      - !Command
+        name: questionable_status_enable
+        dtype: int
+        doc: Read/write the questionable status enable register.
+        label: Questionable Status Emable
+        range: (0,65535)
+    - COND:
+      - !Command
+        name: questionable_status_condition
+        dtype: int
+        doc: Read the questionable status condition register.
+        label: Questionable Status condition
+        write: False
+    - EVEN:
+      - !Command
+        name: questionable_status_event
+        dtype: int
+        doc: Read the questionable status condition register.
+        label: Questionable Status Event
+        write: False
+- SYST:
+  - VERS:
+    - !Command
+      name: version
+      dtype: str
+      doc: Get the system version number.
+      label: Version
+      write: False
+

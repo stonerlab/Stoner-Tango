@@ -1,39 +1,90 @@
 - DISP:
-  - ENAB: !Command
+  - ENAB:
+    - !Command
       name: display_on
       dtype: bool
       doc: Enabel the front panel display
       label: Display On
-      unit: ''
-      read: true
-      write: true
-      reader: sbool
   - WIND1:
     - TEXT:
-      - DATA: !Command
+      - DATA:
+        - !Command
           name: display_line1_text
           dtype: str
           doc: Text to display in line 1
           label: Display top line
-          unit: ''
-          read: true
-          write: true
-          reader: str
-      - STAT: !Command
+      - STAT:
+        - !Command
           name: display_line1_message
           dtype: bool
           doc: Turn the top line to display custom message
           label: Display top line on
-          unit: ''
-          read: true
-          write: true
-          reader: sbool
-    - ATTR: !Command
+    - ATTR:
+      - !Command
         name: display_blink_line1
         dtype: int
         doc: Enable blinking on top line
         label: Diplay top line blinking
-        unit: ''
-        read: true
-        write: true
-        reader: int
+- SENS:
+  - CURR:
+    - RANG:
+      - !Command
+        name: i_sense_range
+        dtype: float
+        doc: Range level for current measurements.
+        label: I Range
+        unit: A
+        range: (0.0,1.0)
+      - AUTO:
+        - !Command
+          name: i_sense_autorange
+          dtype: bool
+          doc: Auto range for current measurements.
+          labels: Autorange I
+        - LLIM:
+          - !Command
+            name: i_sense_autorange_limit
+            dtype: float
+            doc: Limit for autoranging current
+            label: I Autorange limit
+            unit: A
+            range: (0.0,1.0)
+    - NPLC:
+      - !Command
+        name: i_sense_nplc
+        dtype: float
+        doc: Number of power line cycles to measure current for.
+        label: NPLC
+        unit: plc
+        range: (0.01,10.0)
+  - VOLT:
+    - RANG:
+      - !Command
+        name: v_sense_range
+        dtype: float
+        doc: Range level for voltage measurements.
+        label: V Range
+        unit: V
+        range: (0.0,105.0)
+      - AUTO:
+        - !Command
+          name: v_sense_autorange
+          dtype: bool
+          doc: Auto range for voltage measurements.
+          labels: Autorange V
+        - LLIM:
+          - !Command
+            name: v_sense_autorange_limit
+            dtype: float
+            doc: Limit for autoranging voltage
+            label: V Autorange limit
+            unit: V
+            range: (0.0,105.0)
+    - NPLC:
+      - !Command
+        name: v_sense_nplc
+        dtype: float
+        doc: Number of power line cycles to measure voltage for.
+        label: NPLC
+        unit: plc
+        range: (0.01,10.0)
