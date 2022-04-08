@@ -1,0 +1,21 @@
+- '*IDN':
+  - !Command
+    name: idn
+    dtype: str
+    doc: Issue a *IDN? Command to get instrument name
+    label: Identity
+    write: False
+- '*OPC':
+  - !Command
+    name: opc
+    dtype: bool
+    doc: Either wait for a repsonse to *OPC or send the OPC command.
+    writer: Empty
+- '*SRE':
+  - !Command
+    name: sre
+    dtype: int
+    doc: Control the service request enable register
+    range: (0,255)
+    label: Service Request Enable
+    

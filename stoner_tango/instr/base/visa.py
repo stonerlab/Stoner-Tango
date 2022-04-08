@@ -18,9 +18,9 @@ from stoner_tango.util.decorators import command, attribute, pipe, SCPI_Instrume
 from stoner_tango.util import Command, sfmt
 from stoner_tango.instr.exceptions import CommandError
 
-class IEEE488_2(Device):
-
-    """A base class for SCPI instruments."""
+class VISAInstrument(Device):
+    
+    """A Device class that represent a basic VISA instrument that can be communicated with over a VISA comms channel."""
 
     name = device_property(str, doc="VISA Resource name",
                            default_value="GPIB0::10::INSTR",
@@ -51,19 +51,6 @@ class IEEE488_2(Device):
     def status(self,status):
         self.set_status(status)
 
-    #### IEEE488.2 standard queries
-
-    @attribute
-    def idn(self):
-        """Return the instrument identity string.
-
-        Returns:
-            str:
-                Instrument Identity.
-        """
-        return self.protocol.query("*IDN?")
-
-
     @attribute
     def debug(self):
         """Anable debugging log of instrument transactions.
@@ -76,6 +63,73 @@ class IEEE488_2(Device):
     @debug.write
     def debug(self, value):
         self._debug=bool(value)
+        
+        
+    #### Basic comms commands for interacting with the instrument, Mainly for debugging.
+        
+    @command
+    def read(self):
+        """Read data from instrument using the proptocol and transport.
+        
+        Returns:
+            str: Instrument Response
+        """
+        return self.protocol.read()
+    
+    @command
+    def write(self,data):
+        """Weite data to instrument using the protocol and transport.
+        
+        Args:
+            data (str):
+                Instrument Command
+                
+        Returns:
+            int: Bytes sent to instrument.
+        """
+        return self.protocol.write(data)
+    
+    @command
+    def query(self, data):
+        """Do a write-read cycle with the instrument using protocol and transport.
+        
+        Args:
+            data (str):
+                Instrument Command
+                
+        Returns:
+            str: Instrument Response
+        """
+        self.protocol.write(data)
+        return self.protocol.read()
+
+@SCPI_Instrument
+class IEEE488_2(VISAInstrument):
+
+    """A base class for IEEE488.2 Compliant instruments."""
+
+
+    @attribute
+    def get_scpi_attrs(self):
+        """Get the tree of attributes generated from SCPI commands.
+
+        Returns:
+            str: SCPI_Attributes"""
+        scpi_attrs=[]
+        for cls in self.mro():
+            scpi_attrs.extend(cls.__dict__.get("scpi_attrs",[]))
+        return pformat(scpi_attrs)
+
+    @attribute
+    def get_scpi_cmds(self):
+        """Get th dictionary of SCPI Commands implemented as attributes.
+
+        Returns:
+            str: SCPI_Attributes"""
+        scpi_attrs={}
+        for cls in self.mro():
+            scpi_attrs.update(cls.__dict__.get("_scpi_cmds",{}))
+        return pformat(scpi_attrs)
 
     #### Implement IEEE488.2 Commands
 
@@ -101,39 +155,7 @@ class IEEE488_2(Device):
             self.state=tango.DevState.ON
             self.status="Instrument cleared"
 
-    @attribute
-    def opc(self):
-        """Set the operation complete bit or waits for the current operation to complete.
 
-        Returns:
-            bool: Operation Complete
-        """
-        self.state=tango.DevState.MOVING
-        self.protocol.query("*OPC?")
-        self.steate=tango.DevState.ON
-        return True
-
-    @opc.write
-    def opc(self,set):
-        if set:
-            self.protocol.write("*OPC")
-
-
-    @attribute
-    def sre(self):
-        """Set or read the service request enable mask.
-
-        Returns:
-            int:
-                SRQ Enable
-        """
-        return  int(self.protocol.query("*SRE?"))
-
-    @sre.write
-    def sre(self,bits):
-        bits=int(bits)
-        self.protocol.write(f"*SRE {bits%256}")
-        return bits%256
 
 @SCPI_Instrument
 class SCPI(IEEE488_2):
@@ -161,14 +183,6 @@ class SCPI(IEEE488_2):
         err_code=int(match.groupdict()["code"])
         err_msg=match.groupdict()["msg"]
         return "Error",{"code":err_code,"message":err_msg}
-
-    @attribute
-    def get_scpi_attrs(self):
-        """Get a list of SCPI commands to be converted to attributes.
-
-        Returns:
-            str: SCPI_Attributes"""
-        return pformat(getattr(self,"scpi_attrs",[]))
 
 
 if __name__=="__main__":

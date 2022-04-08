@@ -169,7 +169,7 @@
         name: r_sense_mode
         dtype: 
           !ENUM
-          name: R_Sense_Mode
+          name: RSenseMode
           values:
             AUTO: 1
             MAN: 0
@@ -181,5 +181,50 @@
         dtype: bool
         doc: Whether the resistance offset compensation is on or off.
         label: Offset Compensation
-        
-        
+- FORM:
+  - SREG:
+    - !Command
+      name: status_register_format
+      dtype:
+        !ENUM
+        name: StatusRegisterFormat
+        valies:
+          ASC: 0
+          HEX: 1
+          OCT: 2
+          BIN: 3
+      doc: Data Format for reading status event registers.
+      label: Status Register format
+  - DATA:
+    - !Command
+      name: data_format
+      dtype:
+        !ENUM
+        name: DataFormat
+        values:
+          ASC: 0
+          REAL,32: 1
+          SRE: 2
+      docs: Format for reporting data
+      label: Data Format
+  - BORD:
+    - !Command
+      name: data_byte_order
+      dtype:
+        !ENUM
+        name: ByteOrder
+        values:
+          NORM: 0
+          SWAP: 1
+      doc: Set the byte order for binary data transmission
+      label: Byte Order
+- ROUT:
+  - TERM:
+    - !Command
+      name: terminals
+      dtype:
+        !ENUM
+        name: Terminals
+        values:
+          FRON: 0
+          REAR: 1

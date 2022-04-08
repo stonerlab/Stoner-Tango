@@ -2,14 +2,10 @@
 """
 Decorators to help write tango Devices
 """
-__all__=["attribute","command","Command","SCPI_Instrument"]
-from dataclasses import dataclass, fields
-import enum
+__all__=["attribute","command","SCPI_Instrument"]
 from inspect import getsourcefile
 import pathlib
-from pprint import pprint
 import re
-from typing import Optional, Tuple, List, Union
 import yaml
 
 from asteval import Interpreter
@@ -17,7 +13,7 @@ import docstring_parser
 import tango
 import tango.server as server
 
-from .funcs import sfmt, sbool
+from .command import Command
 
 interp=Interpreter(usersyms=tango.__dict__,use_numpy=True)
 range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
@@ -115,7 +111,11 @@ def command(f, dtype_in=None,
             display_level=None,
             polling_period=None,
             green_mode=None):
-    """Produces a tango.controls Device command using information from the docstring."""
+    """Produces a tango.controls Device command using information from the docstring.
+    
+    Uses the parameters from the doc string to determine the type and description of the input parameters and the
+    return type and description for the output dtype and description.
+    """
     dp=docstring_parser.parse(f.__doc__)
     if dp.returns:
         doc_out=dp.returns.description
@@ -139,116 +139,6 @@ def command(f, dtype_in=None,
                           polling_period=polling_period,
                           green_mode=green_mode)
 
-##### Machinery for the SCPI_Insastrument decorator
-
-@dataclass
-class Command:
-
-    name:str
-    dtype:Union[type,enum.Enum]
-    doc:str=""
-    label:str=""
-    unit:str=""
-    read:bool=True
-    write:bool=True
-    reader:callable=None
-    writer:callable=sfmt
-    range:Optional[Tuple[float,float]]=None
-    alarm:Optional[Tuple[float,float]]=None
-    warn:Optional[Tuple[float,float]]=None
-    enum_labels:Optional[List[str]]=None
-
-    def __post_init__(self):
-        """Set the reader function  properly to handle scpi booleans."""
-        if self.reader is None:
-            if issubclass(self.dtype,bool):
-                self.reader=sbool
-            elif issubclass(self.dtype,enum.Enum):
-                def reader(value):
-                    return getattr(self.dtype,value).value
-                self.reader=reader
-            else:
-                self.reader=self.dtype
-        if issubclass(self.dtype,enum.Enum):
-            def writer(value):
-                if isinstance(value,int):
-                    return self.dtype(value).name
-                if isinstance(value,str):
-                    return self.dtype[value]
-                raise ValueError(f"Cannot map {value} into {self.dtype}")
-            self.writer=writer
-    def to_dict(self):
-        """Make a dictionary out of the fields of this class.
-
-        This method is primarily useful for serialising instances of this class.
-        Mostly the fields are just interpreted as is, but the dype and reader fields
-        are simply given as the string names.
-
-        The :py:meth:`Command.from_dict` is the inverse of this method.
-
-        Returns:
-            dict: The Command as a dictionary.
-        """
-        out={}
-        for f in fields(self):
-            out[f.name]=getattr(self,f.name)
-        out["dtype"]=out["dtype"].__name__
-        out["reader"]=out["reader"].__name__
-        return out
-
-    @classmethod
-    def from_dict(cls, dct, symbols):
-        """Build a class instance from a dictionary.
-
-        Args:
-            dct (dict):
-                Dictionary containing the field data.
-            symbols (dict):
-                Additional symbols to use when reconstructing the dtype and reader fields.
-
-        Returns:
-            Command:
-                A new instance of this class.
-        """
-        interp.symtable.update(symbols)
-        fieldnames=set([f.name for f in fields(cls)])
-        names=set(list(dct.keys()))
-        new_dct={}
-        for name in fieldnames&names:
-            if name in["dtype","reader"] and isinstance(dct[name],str):
-                new_dct[name]=interp.eval(dct[name])
-            else:
-                new_dct[name]=dct[name]
-        return cls(**new_dct)
-
-
-def Command_representer(dumper, data):
-    """Makes a representation for :py:class:`Command` to enable dumping to a yaml file."""
-    return dumper.represent_mapping('!Command', data.to_dict().items(), False)
-
-def Command_constructor(loader, node):
-    """Reconstruct a :py:class:`Command` instance from a yaml loader node."""
-    mapping = loader.construct_mapping(node)
-    return Command.from_dict(mapping,{"sbool":sbool})
-
-def Enum_representer(dumper, data):
-    """Makes a representation for :py:class:`Command` to enable dumping to a yaml file."""
-    vals={}
-    for name in data.__members__:
-        vals[name]=getattr(data,name).value
-    return dumper.represent_mapping('!ENUM', {"name":data.__name__,"values":vals})
-
-def Enum_constructor(loader, node):
-    """Reconstruct a :py:class:`Command` instance from a yaml loader node."""
-    mapping = loader.construct_mapping(node)
-    labels = list(loader.construct_mapping(node.value[1][1]).items())
-    labels.sort(key=lambda x:x[1])
-    return enum.Enum(mapping["name"], labels)
-
-yaml.add_representer(Command,Command_representer)
-yaml.add_constructor('!Command', Command_constructor)
-yaml.add_representer(enum.EnumMeta,Enum_representer)
-yaml.add_constructor('!ENUM', Enum_constructor)
 
 def SCPI_Instrument(cls):
 
@@ -295,7 +185,7 @@ def SCPI_Instrument(cls):
 
     if "scpi_attrs" not in cls.__dict__ and clsyaml.exists:
         scpi_attrs=yaml.load(clsyaml.read_text(),yaml.FullLoader)
-        defined=getattr(cls,"scpi_attrs",[])
+        defined=cls.__dict__.get("scpi_attrs",[])
         defined.extend(scpi_attrs)
         setattr(cls,"scpi_attrs", defined)
     else:
@@ -333,46 +223,7 @@ def _process_one(cls,item,cmd=""):
         for key,sub_item in item.items():
             _process_one(cls, sub_item,f"{cmd}:{key}")
     elif isinstance(item,Command): # Do the actualy construction of the attribute
-        access=None
-        if item.read: # Patch in a suitable read function and make a not of its name
-            def f_read(self):
-                return item.reader(self.protocol.query(f"{cmd}?"))
-            setattr(cls,f"read_{item.name}",f_read)
-            access=tango.AttrWriteType.READ
-            fget=f"read_{item.name}"
-        else:
-            fget=None
-        if item.write: # PAtch in a suitable
-            def f_write(self, value):
-                self.protocol.write(f"{cmd} {item.writer(value)}")
-            setattr(cls,f"write_{item.name}",f_write)
-            access=tango.AttrWriteType.READ_WRITE if item.read else tango.AttrWriteType.WRITE
-            fset=f"write_{item.name}"
-        else:
-            fset=None
-        if access is None: # Really we should never get here - perhaps this should be an Exception!
-            return
-        # Build the arguments for the tango.server.attribute call
-        ### TODO need to handle enum types somehowdum
-        args={"fget":fget, "fset":fset, "label":item.label,"doc":item.doc, "dtype":item.dtype,"unit":item.unit,"access":access}
-        if item.range is not None:
-            if isinstance(item.range,str):
-                item.range=interp.eval(item.range)
-            args["min_value"],args["max_value"]=item.range
-        if item.alarm is not None:
-            if isinstance(item.alarm,str):
-                item.alarm=interp.eval(item.alarm)
-            args["min_alarm"],args["max_alarm"]=item.alarm
-        if item.warn is not None:
-            if isinstance(item.warn,str):
-                item.warn=interp.eval(item.warn)
-            args["min_warning"],args["max_warning"]=item.warn
-        if item.dtype==tango.DevEnum and not isinstance(item.enum_labels, list):
-            raise TypeError("Must specify enum_labels if the dtype is an enum!")
-        if item.dtype==tango.DevEnum:
-            args["enum_labels"]=item.enum_labels
-        attr=server.attribute(**args)
-        setattr(cls,item.name,attr)
+        item.adapat_tango_server(cls,cmd)
     else:
         raise TypeError("Error defining scpi attributes with {item}")
 

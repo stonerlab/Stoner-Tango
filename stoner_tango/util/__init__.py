@@ -1,13 +1,13 @@
-__all__=["decorators","fuuncs", "sfmt","sbool","Command"]
+__all__=["decorators","fuuncs", "command", "sfmt","sbool","Command"]
 import sys
 from typing import Any
 from dataclasses import make_dataclass
 
 from tango.utils import TO_TANGO_TYPE
 
-from . import decorators
+from . import command, funcs, decorators
 from.funcs import sfmt,sbool
-from .decorators import Command
+from .command import Command
 
 FROM_TANGO_TYPE={}
 for k,v in TO_TANGO_TYPE.items():
