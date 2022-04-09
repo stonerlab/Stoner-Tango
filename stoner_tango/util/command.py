@@ -4,12 +4,14 @@ Implementation of a dataclass that represents an attribute to map to a scpi comm
 """
 __all__ = ["Command"]
 
+from collections.abc import Iterable
 from dataclasses import dataclass, fields
 import enum
 from typing import Union, Optional, Tuple, List
 import yaml
 
 from asteval import Interpreter
+import numpy as np
 import tango
 from tango import server
 
@@ -20,15 +22,16 @@ interp.symtable["Empty"]=lambda x:""
 
 @dataclass
 class ListParameter:
-    
+
     """Holds the information to configutr s tango attribute to deal with spectrum and image types."""
-    
+
     name:str
     dtype:Union[type,enum.Enum]
     dims:int=1
     max_dim_x:int=2000
     max_dim_y:int=1
-    
+    delimiter:str=","
+
     def __post_init__(self):
         """Ensure consistency of dimensions."""
         if self.min_dim_x*self.min_dim_y<=1:
@@ -37,7 +40,7 @@ class ListParameter:
             raise ValueError("Only 1D or 2D datasets can be specified!")
         if self.dims==1 and self.max_dim_y>1:
             raise ValueError("Cannot have a spectrum with y dimension size set!")
-            
+
 
     def to_dict(self):
         """Make a dictionary out of the fields of this class.
@@ -58,7 +61,7 @@ class ListParameter:
             if callable(out[k]):
                 out[k]=k.__name__
         return out
-    
+
     @classmethod
     def from_dict(cls, dct, symbols):
         """Build a class instance from a dictionary.
@@ -83,17 +86,17 @@ class ListParameter:
             else:
                 new_dct[name]=dct[name]
         return cls(**new_dct)
-    
+
     def adapt_args(self, args):
         """Adjust the tango.server.attribute arguments to deal wqith spectrum and image dtypes.
-        
+
         Args:
             args (dict):
                 The keywords for the attribute creation so far.
-                
+
         Returns:
             dict: Modified args
-            
+
         Warning:
             The parameter args is also modified by this method in place!
         """
@@ -122,23 +125,10 @@ class Command:
     def __post_init__(self):
         """Set the reader function  properly to handle scpi booleans."""
         if self.reader is None:
-            if issubclass(self.dtype,bool):
-                self.reader=sbool
-            elif issubclass(self.dtype,enum.Enum):
-                def reader(value):
-                    return getattr(self.dtype,value).value
-                self.reader=reader
-            else:
-                self.reader=self.dtype
-        if issubclass(self.dtype,enum.Enum):
-            def writer(value):
-                if isinstance(value,int):
-                    return self.dtype(value).name
-                if isinstance(value,str):
-                    return self.dtype[value]
-                raise ValueError(f"Cannot map {value} into {self.dtype}")
-            self.writer=writer
-            
+            self.reader=self.default_reader
+        if self.writer is None:
+            self.writer=self.default_writer
+
     def to_dict(self):
         """Make a dictionary out of the fields of this class.
 
@@ -183,12 +173,12 @@ class Command:
             else:
                 new_dct[name]=dct[name]
         return cls(**new_dct)
-    
+
     def __repr__(self):
         """Make a representation that deals with callable objects in fields."""
         out={}
         for f in fields(self):
-            f=f.name            
+            f=f.name
             value=getattr(self,f)
             if callable(value):
                 value=value.__name__
@@ -197,10 +187,51 @@ class Command:
             out[f]=value
         values=",".join([f"{k}={v}" for k,v in out.items()])
         return f"Command({values})"
-    
+
+    def default_reader(self,value):
+        """Default implementation to convert a string to value of correct type."""
+        if isinstance(value,self.dtype): # Do nothing
+            try:
+                return interp(value)
+            except NameError:
+                return value
+        if isinstance(self.dtype, type) and issubclass(self.dtype,bool): # Boolean values might ON/OFF
+            value=str(value).lower().strip()
+            return value in ["1","yes","on","true","t","y"]
+        if isinstance(self.dtype, type) and issubclass(self.dtype,enum.Enum): # ENUM types need special handling
+            return getattr(self.dtype,value).value
+        if isinstance(self.dtype, ListParameter): # Spectrum and Image types are handled recursively
+            return np.array([self.default_reader(v.strip()) for v in value.split(self.dtype.delimiter)])
+        #Fallback for all other types is to assume the type itself handles the conversion
+        return self.dtype(value)
+
+    def default_writer(self, value):
+        """Convert a value to a string."""
+        if isinstance(self.dtype,ListParameter) and isinstance(value, Iterable) and not isinstance(value,str):
+            return self.dtype.delimiter.join([self.default_writer(v) for v in value])
+        if issubclass(self.dtype,enum.Enum):
+            if isinstance(value,int):
+                return self.dtype(value).name
+            if isinstance(value,str):
+                return self.dtype[value]
+            raise ValueError(f"Cannot map {value} into {self.dtype}")
+        if isinstance(value,bool):
+            return "ON" if value else "OFF"
+        if isinstance(value,float):
+            return f"{value:.6g}"
+        if isinstance(value,str):
+            return f'"{value}"'
+        if isinstance(value,enum.Enum):
+            return value.name
+        return f"{value}"
+
+
+
+
+
     def adapat_tango_server(self,cls,cmd):
         """Use the current Command instance to add a suitable attribute to a tango.server.Device.
-        
+
         Args:
             cls (tango.server.Device):
                 The tange Decice server to add the attribute to.
@@ -210,13 +241,13 @@ class Command:
         access=None # Used to work out the access mode of the attribute
         if self.read: # Patch in a suitable read function and make a note of its name
             def f_read(this):
-                return this.reader(this.protocol.query(f"{cmd}?"))
+                return self.reader(this.protocol.query(f"{cmd}?"))
             setattr(cls,f"read_{self.name}",f_read)
             access=tango.AttrWriteType.READ
             fget=f"read_{self.name}"
         else:
             fget=None
-            
+
         if self.write: # Patch in a suitable read function and make a note of its name
             def f_write(this, value):
                 this.protocol.write(f"{cmd} {self.writer(value)}")
@@ -226,16 +257,16 @@ class Command:
         else:
             fset=None
         if access is None: raise ValueError("Attempting to set an attrbute that is neither readable nor writable is not sensible!")
-        
+
         # Build the arguments for the tango.server.attribute call
         ### TODO need to handle list types somehowdum
-        
+
         args={"fget":fget, "fset":fset, "label":self.label,"doc":self.doc, "dtype":self.dtype,"unit":self.unit,"access":access}
-        
+
         # Sort out the ListParameter dtype
         if isinstance(self.dtype,ListParameter):
             args = self.dtype.adapt_args(args)
-        
+
         if self.range is not None:
             if isinstance(self.range,str):
                 self.range=interp.eval(self.range)
@@ -258,9 +289,9 @@ class Command:
         scpi_cmds[cmd]=self
         setattr(cls,"_scpi_cmds", scpi_cmds)
 
-       
-    
-    
+
+
+
 #### Setup functions to serialise the data classes and the Enum type to and from yaml files.
 
 def Command_representer(dumper, data):

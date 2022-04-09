@@ -6,6 +6,7 @@ Extra utility functions
 __all__=["sbool","sfmt"]
 import enum
 from typing import Any
+
 def sfmt(value:Any)->str:
     """Fomat the value depending on the type."""
     if isinstance(value,bool):
@@ -22,4 +23,3 @@ def sbool(value:Any)->bool:
     """Convert a value to a boolean."""
     value=str(value).lower().strip()
     return value in ["1","yes","on","true","t","y"]
-
