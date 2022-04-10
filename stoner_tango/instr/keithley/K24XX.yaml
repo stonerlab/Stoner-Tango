@@ -1,6 +1,13 @@
 - DISP:
+  - DIG:
+    - !Attribute
+      name: digits
+      dtype: int
+      range: (4,7)
+      doc: Digits to show on the disply
+      label: Display Digits
   - ENAB:
-    - !Command
+    - !Attribute
       name: display_on
       dtype: bool
       doc: Enabel the front panel display
@@ -8,33 +15,65 @@
   - WIND1:
     - TEXT:
       - DATA:
-        - !Command
+        - !Attribute
           name: display_line1_text
           dtype: str
           doc: Text to display in line 1
           label: Display top line
       - STAT:
-        - !Command
+        - !Attribute
           name: display_line1_message
           dtype: bool
           doc: Turn the top line to display custom message
           label: Display top line on
     - ATTR:
-      - !Command
+      - !Attribute
         name: display_blink_line1
-        dtype: int
+        dtype:
+          !ListParameter
+          name: LightBlinks2
+          dtype: bool
+          delimiter: ''
+          max_dim_x: 32
+        write: False
         doc: Enable blinking on top line
         label: Diplay top line blinking
+  - WIND2:
+    - TEXT:
+      - DATA:
+        - !Attribute
+          name: display_line2_text
+          dtype: str
+          doc: Text to display in line 2
+          label: Display bottom line
+      - STAT:
+        - !Attribute
+          name: display_line2_message
+          dtype: bool     
+          doc: Turn the top line to display custom message
+          label: Display bottom line on
+    - ATTR:
+      - !Attribute
+        name: display_blink_line2
+        dtype:
+          !ListParameter
+          name: LightBlinks2
+          dtype: bool
+          delimiter: ''
+          max_dim_x: 64
+        write: False
+        doc: Enable blinking on bottom line
+        label: Diplay bottom line blinking
 - SENS:
-  - COMNC:
-    - !Command
+  - CONC:
+    - !Attribute
       name: concurrent_measurements
       dtype: bool
       doc: Enable concurrent measurements
       label: Concurrent Measurements
   - CURR:
     - RANG:
-      - !Command
+      - !Attribute
         name: i_sense_range
         dtype: float
         doc: Range level for current measurements.
@@ -42,13 +81,13 @@
         unit: A
         range: (0.0,1.0)
       - AUTO:
-        - !Command
+        - !Attribute
           name: i_sense_autorange
           dtype: bool
           doc: Auto range for current measurements.
           labels: Autorange I
         - LLIM:
-          - !Command
+          - !Attribute
             name: i_sense_autorange_limit
             dtype: float
             doc: Limit for autoranging current
@@ -56,7 +95,7 @@
             unit: A
             range: (0.0,1.0)
     - NPLC:
-      - !Command
+      - !Attribute
         name: i_sense_nplc
         dtype: float
         doc: Number of power line cycles to measure current for.
@@ -65,7 +104,7 @@
         range: (0.01,10.0)
     - PROT:
       - LEV:
-        - !Command
+        - !Attribute
           name: i_compliance
           dtype: float
           doc: The current compliance when operating as a voltage source
@@ -73,7 +112,7 @@
           unit: A
           range: (1.0E-6,1.0)
       - TRIP:
-        - !Command
+        - !Attribute
           name: in_i_compliance
           dtype: bool
           ddc: Is the source in current compliance?
@@ -81,7 +120,7 @@
           write: False
   - VOLT:
     - RANG:
-      - !Command
+      - !Attribute
         name: v_sense_range
         dtype: float
         doc: Range level for voltage measurements.
@@ -89,13 +128,13 @@
         unit: V
         range: (0.0,105.0)
       - AUTO:
-        - !Command
+        - !Attribute
           name: v_sense_autorange
           dtype: bool
           doc: Auto range for voltage measurements.
           labels: Autorange V
         - LLIM:
-          - !Command
+          - !Attribute
             name: v_sense_autorange_limit
             dtype: float
             doc: Limit for autoranging voltage
@@ -103,7 +142,7 @@
             unit: V
             range: (0.0,105.0)
     - NPLC:
-      - !Command
+      - !Attribute
         name: v_sense_nplc
         dtype: float
         doc: Number of power line cycles to measure voltage for.
@@ -112,7 +151,7 @@
         range: (0.01,10.0)
     - PROT:
       - LEV:
-        - !Command
+        - !Attribute
           name: v_compliance
           dtype: float
           doc: The voltage compliance when operating as a current source
@@ -120,7 +159,7 @@
           unit: V
           range: (1.0E-3,105.0)
       - TRIP:
-        - !Command
+        - !Attribute
           name: in_v_compliance
           dtype: bool
           ddc: Is the source in voltage compliance?
@@ -128,7 +167,7 @@
           write: False
   - RES:
     - RANG:
-      - !Command
+      - !Attribute
         name: r_sense_range
         dtype: float
         doc: Range level for resistance measurements.
@@ -136,13 +175,13 @@
         unit: Ohm
         range: (0.0,2E18)
       - AUTO:
-        - !Command
+        - !Attribute
           name: r_sense_autorange
           dtype: bool
           doc: Auto range for resistance measurements.
           labels: Autorange R
         - LLIM:
-          - !Command
+          - !Attribute
             name: r_sense_autorange_lower_limit
             dtype: float
             doc: Lower Limit for autoranging resistance
@@ -150,7 +189,7 @@
             unit: Ohm
             range: (0.0,2E18)
         - ULIM:
-          - !Command
+          - !Attribute
             name: r_sense_autorange_upper_limit
             dtype: float
             doc: Upper Limit for autoranging resistance
@@ -158,14 +197,14 @@
             unit: Ohm
             range: (0.0,2E18)
     - NPLC:
-      - !Command
+      - !Attribute
         name: r_sense_nplc
         dtype: float
         doc: Number of power line cycles to measure resistance for.
         label: NPLC
         unit: plc
     - MODE:
-      - !Command
+      - !Attribute
         name: r_sense_mode
         dtype: 
           !ENUM
@@ -176,14 +215,14 @@
         doc: Manual or automatic configuration of resistance readings.
         label: R Sense Mode
     - OCOM:
-      - !Command
+      - !Attribute
         name: r_sense_offset_compensation
         dtype: bool
         doc: Whether the resistance offset compensation is on or off.
         label: Offset Compensation
 - FORM:
   - SREG:
-    - !Command
+    - !Attribute
       name: status_register_format
       dtype:
         !ENUM
@@ -196,7 +235,7 @@
       doc: Data Format for reading status event registers.
       label: Status Register format
   - DATA:
-    - !Command
+    - !Attribute
       name: data_format
       dtype:
         !ENUM
@@ -208,7 +247,7 @@
       docs: Format for reporting data
       label: Data Format
   - BORD:
-    - !Command
+    - !Attribute
       name: data_byte_order
       dtype:
         !ENUM
@@ -218,9 +257,27 @@
           SWAP: 1
       doc: Set the byte order for binary data transmission
       label: Byte Order
+  - ELEM:
+    - !Attribute
+      name: data_elements
+      dtype:
+        !ListParameter
+        name: DataElementList
+        dtype:
+          !ENUM
+          name: DataElement
+          values:
+            VOLT: 0
+            CURR: 1
+            RES: 2
+            TIME: 3
+            STAT: 4
+        max_dim_x: 5
+      doc: Set the elements of the data to be returned
+      label: Data Elements
 - ROUT:
   - TERM:
-    - !Command
+    - !Attribute
       name: terminals
       dtype:
         !ENUM
@@ -228,3 +285,75 @@
         values:
           FRON: 0
           REAR: 1
+- SYST:
+  - RSEN:
+    - !Attribute
+     name: four_terminal
+     dtype: bool
+     doc: Enable remote sense mode?
+     label: 4-Terminal
+  - BEEP:
+    - STAT:
+      - !Attribute
+        name: beeper_on
+        dtype: bool
+        doc: Enable system beeper
+        label: Beeper On
+- TRAC:
+  - FEED:
+    - !Attribute
+      name: buffer_feed
+      dtype:
+        !ENUM
+        name: BufferFeed
+        values:
+          SENS1: 0
+          CALC1: 1
+          CALC2: 2
+      doc: Source for buffer readings
+      label: Buffer Feed
+    - CONT:
+      - !Attribute
+        name: buffer_on
+        dtype:
+          !ENUM
+          name: BufferControl
+          values:
+            NEV: 0
+            NEXT: 1
+        doc: Control buffer readings
+        label: Buffer Control
+  - POIN:
+    - !Attribute
+      name: buffer_size
+      dtype: int
+      range: (1,2500)
+      doc: Size of buffer
+      label: Buffer Size
+    - ACT:
+      - !Attribute
+        name: buffer_points
+        dtype: int
+        write: False
+        doc: Actual number of points in the buffer
+        label: Buffer Points
+  - FREE:
+    - !Attribute
+      name: buffer_memory
+      dtype:
+        !ListParameter
+        name: BufferMemory
+        dtype: int
+        max_dim_x: 2
+      write: False
+      doc: Buffer memory free and used
+      label: Buffer Memmory
+  - CLE:
+    - !Command
+      name: clear_buffer
+      dtype_in: None
+      dtype_out: None
+      doc: Clear the buffer
+
+        
+        

@@ -3,7 +3,7 @@
 Extra utility functions
 """
 
-__all__=["sbool","sfmt"]
+__all__=["sfmt"]
 import enum
 from typing import Any
 
@@ -19,7 +19,7 @@ def sfmt(value:Any)->str:
         return value.name
     return f"{value}"
 
-def sbool(value:Any)->bool:
-    """Convert a value to a boolean."""
-    value=str(value).lower().strip()
-    return value in ["1","yes","on","true","t","y"]
+def glue_and_quote(value):
+    value="".join([f"{v:1d}" for v in value])
+    return f'"{value}"'
+

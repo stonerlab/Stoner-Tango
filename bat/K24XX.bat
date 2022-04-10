@@ -5,5 +5,5 @@ call conda activate tango >> C:\temp\k24xx.log 2>&1
 where python >> C:\TEMP\k24xx.log
 set PYTHONPATH=C:\Stoner-Tango
 set >> C:\temp\k24xx.log
-call python.exe ..\stoner_tango\instr\keithley\k24xx.py %1 >> C:\temp\k24xx.log 2>&1
+call python.exe %0\..\..\stoner_tango\instr\keithley\k24xx.py %1 >> C:\temp\k24xx.log 2>&1
 

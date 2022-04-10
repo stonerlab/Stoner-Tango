@@ -79,7 +79,7 @@ class SCPIProtocol(Raw):
             while err_code!=0:
                 self._transport.state=tango.DevState.ALARM
                 self._transport.status=f"Error after writing {data}"
-                error=self._transport.query("SYST:ERR?")
+                error=self._transport.query(":SYST:ERR?")
                 match=self.err_pat.match(error)
                 if not match:
                     err_code=0

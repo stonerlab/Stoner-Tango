@@ -13,7 +13,7 @@ import docstring_parser
 import tango
 import tango.server as server
 
-from .command import Command
+from .command import AttributeItem, CommandItem
 
 interp=Interpreter(usersyms=tango.__dict__,use_numpy=True)
 range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
@@ -153,7 +153,7 @@ def SCPI_Instrument(cls):
         scpi_attrs=[
             {"ROOT":[
                 {"BRANCH":[
-                    {"TWIG1":Command(name='attr_nme',
+                    {"TWIG1":AttributeItem(name='attr_nme',
                                      dtype = python_type,
                                      label = "Short name",
                                      unit = 'Units for display",
@@ -167,14 +167,14 @@ def SCPI_Instrument(cls):
             {"ROOT2": [....]}
             ]
 
-    The YAML file has the equivalent structure, wth the Command class be represented with a !Command tag.
+    The YAML file has the equivalent structure, wth the AttributeItem class be represented with a !AttributeItem tag.
 
     The decorator will create read_{attr-name} and write_{attr-name} methods that will send the relevant SCPI strings to the
     instrument and collect the replies, format them using the *reader* entry to convert them to the correct python data type.
 
     It then also creates a tango attribute of the same name that uses these read/write methods to make the data available over the
-    tango Device api. The access mode is determined from the read & write fields of Command (which should reflect whether there is a
-     matching SCPI ? query). The *name* and *dtype* fields of Command are mandetory, default values are prpvided for other fields.
+    tango Device api. The access mode is determined from the read & write fields of AttributeItem (which should reflect whether there is a
+     matching SCPI ? query). The *name* and *dtype* fields of AttributeItem are mandetory, default values are prpvided for other fields.
 
     Internally the decorator is doing some slightly undocumented things with the tango.server.DataMeta to ensure this actually works!
     """
@@ -190,6 +190,11 @@ def SCPI_Instrument(cls):
         setattr(cls,"scpi_attrs", defined)
     else:
         scpi_attrs=getattr(cls,"scpi_attrs",[])
+        
+    # cls._scpi_attrs is a mapping between the class attribute (tango attribute/command) and the SCPI command implemented
+    # for debuggin purposes!
+    _scpi_attrs=getattr(cls,"_scpi_attrs",{})
+    setattr(cls,'_scpi_attrs',_scpi_attrs)
 
     for item in scpi_attrs:
         _process_one(cls, item)
@@ -202,14 +207,14 @@ def _process_one(cls,item,cmd=""):
     Args:
         cls (tango.server.Decice class):
             The tango.server.Device subclass that we are decorating.
-        item (list|dict|Command):
+        item (list|dict|AttributeItem):
             The current bit of the scpi_attr being processed.
         cmd (str):
             The current SCPI command path as a string.
 
     Raises:
         TypeError:
-            If item is not a list, dict, or Command instance.
+            If item is not a list, dict, or AttributeItem instance.
 
     Modifies:
         cls:
@@ -222,8 +227,9 @@ def _process_one(cls,item,cmd=""):
     elif isinstance(item, dict):
         for key,sub_item in item.items():
             _process_one(cls, sub_item,f"{cmd}:{key}")
-    elif isinstance(item,Command): # Do the actualy construction of the attribute
+    elif isinstance(item,(AttributeItem, CommandItem)): # Do the actualy construction of the attribute
         item.adapat_tango_server(cls,cmd)
+        cls._scpi_attrs[item.name]=cmd
     else:
-        raise TypeError("Error defining scpi attributes with {item}")
+        raise TypeError(f"Error defining scpi attributes with {item}")
 

@@ -6,16 +6,12 @@ Provides a Base Class for SCPI instruments.
 from pprint import pformat
 
 import tango
-from tango.server import run
 from tango.server import Device
 from tango.server import device_property
-from tango.attr_data import AttrData
-from tango.utils import TO_TANGO_TYPE
 
 from stoner_tango.instr.base.transport import GPIBTransport
 from stoner_tango.instr.base.protocol import SCPIProtocol
 from stoner_tango.util.decorators import command, attribute, pipe, SCPI_Instrument
-from stoner_tango.util import Command, sfmt
 from stoner_tango.instr.exceptions import CommandError
 
 class VISAInstrument(Device):
@@ -116,7 +112,7 @@ class IEEE488_2(VISAInstrument):
         Returns:
             str: SCPI_Attributes"""
         scpi_attrs=[]
-        for cls in self.mro():
+        for cls in self.__mro__:
             scpi_attrs.extend(cls.__dict__.get("scpi_attrs",[]))
         return pformat(scpi_attrs)
 
@@ -127,33 +123,33 @@ class IEEE488_2(VISAInstrument):
         Returns:
             str: SCPI_Attributes"""
         scpi_attrs={}
-        for cls in self.mro():
+        for cls in self.__mro__:
             scpi_attrs.update(cls.__dict__.get("_scpi_cmds",{}))
         return pformat(scpi_attrs)
 
     #### Implement IEEE488.2 Commands
 
-    @command
-    def reset(self):
-        """Reset the instrument to defaults."""
-        try:
-            self.protocol.write("*RST")
-        except CommandError:
-            self.state=tango.DevState.ALARM
-        else:
-            self.state=tango.DevState.ON
-            self.status="Instrument reset"
+    # @command
+    # def reset(self):
+    #     """Reset the instrument to defaults."""
+    #     try:
+    #         self.protocol.write("*RST")
+    #     except CommandError:
+    #         self.state=tango.DevState.ALARM
+    #     else:
+    #         self.state=tango.DevState.ON
+    #         self.status="Instrument reset"
 
-    @command
-    def cls(self):
-        """Issue a CLS command to clear register bits and error queue."""
-        try:
-            self.protocol.write("*CLS")
-        except CommandError:
-            self.state=tango.DevState.ALARM
-        else:
-            self.state=tango.DevState.ON
-            self.status="Instrument cleared"
+    # @command
+    # def cls(self):
+    #     """Issue a CLS command to clear register bits and error queue."""
+    #     try:
+    #         self.protocol.write("*CLS")
+    #     except CommandError:
+    #         self.state=tango.DevState.ALARM
+    #     else:
+    #         self.state=tango.DevState.ON
+    #         self.status="Instrument cleared"
 
 
 

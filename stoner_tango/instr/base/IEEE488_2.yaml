@@ -1,21 +1,32 @@
 - '*IDN':
-  - !Command
+  - !Attribute
     name: idn
     dtype: str
     doc: Issue a *IDN? Command to get instrument name
     label: Identity
     write: False
 - '*OPC':
-  - !Command
+  - !Attribute
     name: opc
     dtype: bool
     doc: Either wait for a repsonse to *OPC or send the OPC command.
     writer: Empty
 - '*SRE':
-  - !Command
+  - !Attribute
     name: sre
     dtype: int
     doc: Control the service request enable register
     range: (0,255)
     label: Service Request Enable
-    
+- '*RST':
+  - !Command
+    name: reset
+    dtype_in: None
+    dtype_out: None
+    doc: Reset the instrument to default state
+- '*CLS':
+  - !Command
+    name: cls
+    dtype_in: None
+    dtype_out: None
+    doc: Clear instrument communications queues and status registers
