@@ -1,4 +1,157 @@
+- INIT:
+  - IMM:
+    - !Command
+      name: start
+      dtype_in: None
+      dtype_out: None
+      doc: Start the source-measure cycle
+- ABOR:
+  - !Command
+    name: abort
+    dtype_in: None
+    dtype_out: None
+    doc: Abort the source-measure cycle
+- ARM:
+  - COUN:
+    - !Attribute
+      name: arm_count
+      dtype: int
+      doc: Number of tims to arm the system
+      label: Arm Count
+      reader: ReadLargeAsInf
+      writer: WriteNegAsInf
+  - SOUR:
+    - !Attribute
+      name: arm_source
+      doc: Arm Layer Event source
+      label: Arm Source
+      dtype:
+        !ENUM
+        name: ArmSource
+        values:
+          IMM: 0
+          TIM: 1
+          MAN: 2
+          BUS: 3
+          TLIN: 4
+          NST: 5
+          PST: 6
+          BST: 7
+  - TIM:
+    - !Attribute
+      name: arm_timer
+      dtype: float
+      range: (0.001, 99999.9)
+      doc: Arm timing delay
+      unit: s
+      label: Arm Timer
+  - DIR:
+    - !Attribute
+      name: arm_bypass
+      dtype:
+        !ENUM
+        name: Bypass
+        values:
+          ACC: 0       
+          SOUR: 1
+      doc: Bypass the ARM layer on the first pass
+      lable: Arm Bypass
+  - ILIN:
+    - !Attribute
+      name: arm_input_trigger_line
+      dtype: int
+      range: (1,4)
+      doc: Input trigger link line for arm layer
+      label: Arm Tlink In
+  - OLIN:
+    - !Attribute
+      name: arm_output_trigger_line
+      dtype: int
+      range: (1,4)
+      doc: Ouptput trigger link line for arm layer
+      label: Arm Tlink Out
+  - OUTP:
+    - !Attribute
+      name: arm_output_event
+      dtype:
+        !ENUM
+        name: ArmOutputEvent
+        values:
+          NONE: 0
+          TENT: 1
+          TEXT: 2
+- TRIG:
+  - CLE:
+    - !Command
+      name: reset_trigger
+      dtype_in: None
+      dtype_out: None
+      doc: Cancel pending triggers
+  - COUN:
+    - !Attribute
+      name: trigger_count
+      dtype: int
+      doc: Number of tims to trigger the system
+      label: Trigger Count
+  - SOUR:
+    - !Attribute
+      name: trigger_source
+      doc: Trigger Event source
+      label: Trigger Source
+      dtype:
+        !ENUM
+        name: TriggerSource
+        values:
+          IMM: 0
+          TLIN: 1
+  - DEL:
+    - !Attribute
+      name: trigger_delay
+      dtype: float
+      range: (0., 99999.9)
+      doc: Trigger delay
+      unit: s
+      label: Trigger Timer
+  - DIR:
+    - !Attribute
+      name: atrigger_bypass
+      dtype:
+        !ENUM
+        name: Bypass
+      doc: Bypass the Trigger layer on the first pass
+      lable: Trigger Bypass
+  - ILIN:
+    - !Attribute
+      name: trigger_input_line
+      dtype: int
+      range: (1,4)
+      doc: Input trigger link line for trigger layer
+      label: Trigger Tlink In
+  - OLIN:
+    - !Attribute
+      name: trigger_output_line
+      dtype: int
+      range: (1,4)
+      doc: Ouptput trigger link line for trigger layer
+      label: Trigger Tlink Out
+  - OUTP:
+    - !Attribute
+      name: trigger_output_event
+      dtype:
+        !ENUM
+        name: TriggerOutputEvent
+        values:
+          NONE: 0
+          SOUR: 1
+          DEL: 2
+          SENS: 3      
 - DISP:
+  - CND:
+    - !Command
+      name: reset_display
+      dtype_in: None
+      dtype_out: None
+      doc: Reset the display to normal
   - DIG:
     - !Attribute
       name: digits
@@ -65,12 +218,61 @@
         doc: Enable blinking on bottom line
         label: Diplay bottom line blinking
 - SENS:
-  - CONC:
-    - !Attribute
-      name: concurrent_measurements
-      dtype: bool
-      doc: Enable concurrent measurements
-      label: Concurrent Measurements
+  - AVER:
+    - TCON:
+      - !Attribute
+        name: filter_type
+        dtype:
+          !ENUM
+          name: FilterType
+          values:
+            REP: 0
+            MOV: 1
+        doc: Type of filter to use, repeat or moving
+        label: Filter Type
+    - COUN:
+      - !Attribute
+        name: filter_count
+        dtype: int
+        doc: Filter windows size
+        label: Filter size
+        range: (1,100)
+    - STAT:
+      - !Attribute
+        name: filter_on
+        dtype: bool
+        doc: Enable the filter
+        label: 'Filter On?'
+  - FUNC:
+    - CONC:
+      - !Attribute
+        name: concurrent_measurements
+        dtype: bool
+        doc: Enable concurrent measurements
+        label: Concurrent Measurements
+    - ON:
+      - !Attribute
+        name: measurements_on
+        dtype:
+          !ListParameter
+          name: MeasurementList
+          dtype: str
+          max_dim_x: 3
+        doc: List of Measurements turned on
+        label: On Measurements
+    - OFF:
+      - ALL:
+        - !Command
+          name: all_measurements_off
+          dtype_in: None
+          dtype_out: None
+    - STAT:
+      - !Command
+        name: is_measured
+        dtype_in: str
+        doc_in: Measurement function (VOLT, CURR, RES)
+        dtype_out: bool
+        doc_out: Is the measirement function active T/F
   - CURR:
     - RANG:
       - !Attribute
@@ -227,7 +429,7 @@
       dtype:
         !ENUM
         name: StatusRegisterFormat
-        valies:
+        values:
           ASC: 0
           HEX: 1
           OCT: 2
@@ -299,6 +501,34 @@
         dtype: bool
         doc: Enable system beeper
         label: Beeper On
+- OUTP:
+  - STAT:
+    - !Attribute
+      name: output_on
+      dtype: bool
+      doc: Turn the output on or off
+      label: 'Output?'
+  - INT:
+    - STAT:
+      - !Attribute
+        name: output_interlock_on
+        dtype: bool
+        doc: Enable the hardware intrerlock
+        label: 'Output Interlock?'
+  - SMOD:
+    - !Attribute
+      name: output_off_state
+      dtype:
+        !ENUM
+        name: OutptuOffState
+        values:
+          NORM: 0
+          HIMP: 1
+          ZERO: 2
+          GUAR: 3
+      doc: Control, the impedance of the smu when it is off
+      label: Output Off State
+      
 - TRAC:
   - FEED:
     - !Attribute

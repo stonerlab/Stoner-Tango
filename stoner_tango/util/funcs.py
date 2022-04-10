@@ -23,3 +23,16 @@ def glue_and_quote(value):
     value="".join([f"{v:1d}" for v in value])
     return f'"{value}"'
 
+def EnumQuoted(value):
+    return f'"{value.name}"'
+
+def WriteNegAsInf(value):
+    if value<0:
+        return "INF"
+    return f"{value:d}"
+
+def ReadLargeAsInf(value):
+    res=float(value)
+    if res>1E10:
+        return -1
+    return int(res)

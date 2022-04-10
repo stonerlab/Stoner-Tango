@@ -7,6 +7,7 @@ __all__ = ["AttributeItem"]
 from collections.abc import Iterable
 from dataclasses import dataclass, fields
 import enum
+from importlib import import_module
 from typing import Union, Optional, Tuple, List
 import yaml
 
@@ -28,6 +29,7 @@ for k,v in __builtins__.items():
     except TypeError:
         pass
     
+_enum_types={}
 
 @dataclass
 class ListParameter:
@@ -288,6 +290,9 @@ class AttributeItem:
         # Build the arguments for the tango.server.attribute call
         ### TODO need to handle list types somehowdum
 
+        if isinstance(self.dtype,type) and issubclass(self.dtype,enum.Enum):
+            setattr(cls,f"Enum{self.dtype.__name__}", self.dtype)
+
         args={"fget":fget, "fset":fset, "label":self.label,"doc":self.doc, "dtype":self.dtype,"unit":self.unit,"access":access}
 
         # Sort out the ListParameter dtype
@@ -463,6 +468,10 @@ class CommandItem:
         execute_cmd.__name__=f"{self.name}"
         execute_cmd.__doc__=f"{cmd}\n{self.doc}\n\nArg:\n\t{self.doc_in}\n\nReturns\n\t{self.doc_out}\n"
         setattr(cls,f"__execute_{self.name}",execute_cmd)
+        if isinstance(self.dtype_in,type) and issubclass(self.dtype_in,enum.Enum):
+            setattr(cls,f"Enum{self.dtype_in.__name__}", self.dtype_in)
+        if isinstance(self.dtype_out,type) and issubclass(self.dtype_out,enum.Enum):
+            setattr(cls,f"Enum{self.dtype_out.__name__}", self.dtype_out)
         
 
         # Build the arguments for the tango.server.attribute call
@@ -520,9 +529,23 @@ def ListParameter_constructor(loader, node):
 def Enum_constructor(loader, node):
     """Reconstruct a :py:class:`AttributeItem` instance from a yaml loader node."""
     mapping = loader.construct_mapping(node)
+    if "values" not in mapping: # Not a full description in yaml
+        name=mapping["name"]
+        if name in _enum_types: # Cached already for this class?
+            return _enum_types[name]
+        if "." in name: # Perhaps we can import the enum?
+            parts=name.spplit(".")
+            mod=".".join(parts[:-1])
+            mod = import_module(mod)
+            ret=getattr(mod,parts[-1])
+            _enum_types[name]=ret
+            return ret
+        raise TypeError(f"Unable to set up Enum type {name}")
     labels = list(loader.construct_mapping(node.value[1][1]).items())
     labels.sort(key=lambda x:x[1])
-    return enum.Enum(mapping["name"], labels)
+    ret = enum.Enum(mapping["name"], labels)
+    _enum_types[mapping["name"]]=ret
+    return ret
 
 yaml.add_representer(AttributeItem,AttributeItem_representer)
 yaml.add_constructor('!Attribute', AttributeItem_constructor)

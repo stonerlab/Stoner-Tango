@@ -73,24 +73,28 @@ class SCPIProtocol(Raw):
     def write(self,data:str)->int:
         """Check the status byte after writing to the intrument."""
         ret=super().write(data)
-        if hasattr(self._transport,"stb") and (self._transport.stb & 4)==4:
-            err_code,err_msg=True,""
-            errs=""
-            while err_code!=0:
-                self._transport.state=tango.DevState.ALARM
-                self._transport.status=f"Error after writing {data}"
-                error=self._transport.query(":SYST:ERR?")
-                match=self.err_pat.match(error)
-                if not match:
-                    err_code=0
-                    continue
-                err_code=float(match.groupdict()["code"])
-                err_msg=match.groupdict()["msg"]
-                print(f"SCPI Error: {error}", file=self._transport.log_debug)
-                errs+=error                
-                time.sleep(self.sleep)
-            self._transport.write("*CLS")
-            raise CommandError(data)
+        if hasattr(self._transport,"stb"):
+            if (self._transport.stb & 4)==4:
+                err_code,err_msg=True,""
+                errs=""
+                while err_code!=0:
+                    self._transport.state=tango.DevState.ALARM
+                    self._transport.status=f"Error after writing {data}"
+                    error=self._transport.query(":SYST:ERR?")
+                    match=self.err_pat.match(error)
+                    if not match:
+                        err_code=0
+                        continue
+                    err_code=float(match.groupdict()["code"])
+                    err_msg=match.groupdict()["msg"]
+                    print(f"SCPI Error: {error}", file=self._transport.log_debug)
+                    errs+=error                
+                    time.sleep(self.sleep)
+                self._transport.write("*CLS")
+                raise CommandError(data)
+            else:
+                self._transport.statu="OK"
+                self._transport.state=tango.DevState.ON
         return ret
     
     def read(self, bytes:int=-1)->str:
@@ -117,18 +121,20 @@ class OITraditional(Raw):
         ret = super().write(data)
         result=self.read()
         if len(result)==0 or result[0]!=data[0]:
-            self._transport.state=tango.DecState.ALARM
+            self._transport.state=tango.DevState.ALARM
             self._transport.status=f"Sent {data} but got {result} back!"
             print("Mimatched command and response {data}->{result}", file=self._dev.log_debug)
             raise CommandError(f"Mimatching commands {data} and {result}")
         if len(result)  and result[-1]=="?":
-            self._transport.state=tango.DecState.ALARM
+            self._transport.state=tango.DevState.ALARM
             self._transport.status=f"{data} resulted in a command error!"
             print(f"{data} resulted in a command error!", file=self._dev.log_debug)
             raise CommandError(f"{data} resulted in a command error!")
         if len(result)>1:
             result=result[1:]
         self._results.append(result)
+        self._transport.state=tango.DevState.ON
+        self._transport.status="OK"
         return ret
         
     def read(self, bytes:int=-1)->str:

@@ -14,6 +14,7 @@ import tango
 import tango.server as server
 
 from .command import AttributeItem, CommandItem
+from .import command as st_commands
 
 interp=Interpreter(usersyms=tango.__dict__,use_numpy=True)
 range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
@@ -182,6 +183,8 @@ def SCPI_Instrument(cls):
     clspth=pathlib.Path(getsourcefile(cls.__mro__[0])).parent # This is horrible and due to how tango.server.Device works
 
     clsyaml=clspth/f"{cls.__name__}.yaml"
+    
+    st_commands._enum_types={} # C
 
     if "scpi_attrs" not in cls.__dict__ and clsyaml.exists:
         scpi_attrs=yaml.load(clsyaml.read_text(),yaml.FullLoader)
