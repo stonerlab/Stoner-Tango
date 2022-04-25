@@ -1,80 +1,76 @@
 - INIT:
   - IMM:
     - !Command
-      name: start
-      dtype_in: None
-      dtype_out: None
+      name: Start
+      dtype_in: null
+      dtype_out: null
       doc: Start the source-measure cycle
 - ABOR:
   - !Command
-    name: abort
-    dtype_in: None
-    dtype_out: None
+    name: Abort
+    dtype_in: null
+    dtype_out: null
     doc: Abort the source-measure cycle
 - ARM:
   - COUN:
     - !Attribute
-      name: arm_count
+      name: armCount
       dtype: int
       doc: Number of tims to arm the system
       label: Arm Count
-      reader: ReadLargeAsInf
-      writer: WriteNegAsInf
+      reader: null
+      writer: null
   - SOUR:
     - !Attribute
-      name: arm_source
-      doc: Arm Layer Event source
-      label: Arm Source
-      dtype:
-        !ENUM
+      name: armSource
+      dtype: !ENUM
         name: ArmSource
         values:
-          IMM: 0
-          TIM: 1
-          MAN: 2
+          BST: 7
           BUS: 3
-          TLIN: 4
+          IMM: 0
+          MAN: 2
           NST: 5
           PST: 6
-          BST: 7
+          TIM: 1
+          TLIN: 4
+      doc: Arm Layer Event source
+      label: Arm Source
   - TIM:
     - !Attribute
-      name: arm_timer
+      name: armTimer
       dtype: float
-      range: (0.001, 99999.9)
       doc: Arm timing delay
-      unit: s
       label: Arm Timer
+      unit: s
+      range: (0.001, 99999.9)
   - DIR:
     - !Attribute
-      name: arm_bypass
-      dtype:
-        !ENUM
+      name: armBypass
+      dtype: &id001 !ENUM
         name: Bypass
         values:
-          ACC: 0       
+          ACC: 0
           SOUR: 1
       doc: Bypass the ARM layer on the first pass
-      lable: Arm Bypass
   - ILIN:
     - !Attribute
-      name: arm_input_trigger_line
+      name: armInputTriggerLine
       dtype: int
-      range: (1,4)
       doc: Input trigger link line for arm layer
       label: Arm Tlink In
+      range: (1,4)
   - OLIN:
     - !Attribute
-      name: arm_output_trigger_line
+      name: armOutputTriggerLine
       dtype: int
-      range: (1,4)
       doc: Ouptput trigger link line for arm layer
       label: Arm Tlink Out
+      range: (1,4)
   - OUTP:
     - !Attribute
-      name: arm_output_event
-      dtype:
-        !ENUM
+      name: armOutputEvent
+      dtype: !ENUM
         name: ArmOutputEvent
         values:
           NONE: 0
@@ -83,85 +79,80 @@
 - TRIG:
   - CLE:
     - !Command
-      name: reset_trigger
-      dtype_in: None
-      dtype_out: None
+      name: ResetTrigger
+      dtype_in: null
+      dtype_out: null
       doc: Cancel pending triggers
   - COUN:
     - !Attribute
-      name: trigger_count
+      name: triggerCount
       dtype: int
       doc: Number of tims to trigger the system
       label: Trigger Count
   - SOUR:
     - !Attribute
-      name: trigger_source
-      doc: Trigger Event source
-      label: Trigger Source
-      dtype:
-        !ENUM
+      name: triggerSource
+      dtype: !ENUM
         name: TriggerSource
         values:
           IMM: 0
           TLIN: 1
+      doc: Trigger Event source
+      label: Trigger Source
   - DEL:
     - !Attribute
-      name: trigger_delay
+      name: triggerDelay
       dtype: float
-      range: (0., 99999.9)
       doc: Trigger delay
-      unit: s
       label: Trigger Timer
+      unit: s
+      range: (0., 99999.9)
   - DIR:
     - !Attribute
-      name: atrigger_bypass
-      dtype:
-        !ENUM
-        name: Bypass
+      name: atriggerBypass
+      dtype: *id001
       doc: Bypass the Trigger layer on the first pass
-      lable: Trigger Bypass
   - ILIN:
     - !Attribute
-      name: trigger_input_line
+      name: triggerInputLine
       dtype: int
-      range: (1,4)
       doc: Input trigger link line for trigger layer
       label: Trigger Tlink In
+      range: (1,4)
   - OLIN:
     - !Attribute
-      name: trigger_output_line
+      name: triggerOutputLine
       dtype: int
-      range: (1,4)
       doc: Ouptput trigger link line for trigger layer
       label: Trigger Tlink Out
+      range: (1,4)
   - OUTP:
     - !Attribute
-      name: trigger_output_event
-      dtype:
-        !ENUM
+      name: triggerOutputEvent
+      dtype: !ENUM
         name: TriggerOutputEvent
         values:
-          NONE: 0
-          SOUR: 1
           DEL: 2
-          SENS: 3      
+          NONE: 0
+          SENS: 3
+          SOUR: 1
 - DISP:
   - CND:
     - !Command
-      name: reset_display
-      dtype_in: None
-      dtype_out: None
+      name: ResetDisplay
+      dtype_in: null
+      dtype_out: null
       doc: Reset the display to normal
   - DIG:
     - !Attribute
       name: digits
       dtype: int
-      range: (4,7)
       doc: Digits to show on the disply
       label: Display Digits
+      range: (4,7)
   - ENAB:
     - !Attribute
-      name: display_on
+      name: displayOn
       dtype: bool
       doc: Enabel the front panel display
       label: Display On
@@ -169,114 +160,110 @@
     - TEXT:
       - DATA:
         - !Attribute
-          name: display_line1_text
+          name: displayLine1Text
           dtype: str
           doc: Text to display in line 1
           label: Display top line
       - STAT:
         - !Attribute
-          name: display_line1_message
+          name: displayLine1Message
           dtype: bool
           doc: Turn the top line to display custom message
           label: Display top line on
     - ATTR:
       - !Attribute
-        name: display_blink_line1
-        dtype:
-          !ListParameter
+        name: displayBlinkLine1
+        dtype: !ListParameter
           name: LightBlinks2
           dtype: bool
-          delimiter: ''
           max_dim_x: 32
-        write: False
+          delimiter: ''
         doc: Enable blinking on top line
         label: Diplay top line blinking
+        write: false
   - WIND2:
     - TEXT:
       - DATA:
         - !Attribute
-          name: display_line2_text
+          name: displayLine2Text
           dtype: str
           doc: Text to display in line 2
           label: Display bottom line
       - STAT:
         - !Attribute
-          name: display_line2_message
-          dtype: bool     
+          name: displayLine2Message
+          dtype: bool
           doc: Turn the top line to display custom message
           label: Display bottom line on
     - ATTR:
       - !Attribute
-        name: display_blink_line2
-        dtype:
-          !ListParameter
+        name: displayBlinkLine2
+        dtype: !ListParameter
           name: LightBlinks2
           dtype: bool
-          delimiter: ''
           max_dim_x: 64
-        write: False
+          delimiter: ''
         doc: Enable blinking on bottom line
         label: Diplay bottom line blinking
+        write: false
 - SENS:
   - AVER:
     - TCON:
       - !Attribute
-        name: filter_type
-        dtype:
-          !ENUM
+        name: filterType
+        dtype: !ENUM
           name: FilterType
           values:
-            REP: 0
             MOV: 1
+            REP: 0
         doc: Type of filter to use, repeat or moving
         label: Filter Type
     - COUN:
       - !Attribute
-        name: filter_count
+        name: filterCount
         dtype: int
         doc: Filter windows size
         label: Filter size
         range: (1,100)
     - STAT:
       - !Attribute
-        name: filter_on
+        name: filterOn
         dtype: bool
         doc: Enable the filter
-        label: 'Filter On?'
+        label: Filter On?
   - FUNC:
     - CONC:
       - !Attribute
-        name: concurrent_measurements
+        name: concurrentMeasurements
         dtype: bool
         doc: Enable concurrent measurements
         label: Concurrent Measurements
-    - ON:
+    - true:
       - !Attribute
-        name: measurements_on
-        dtype:
-          !ListParameter
+        name: measurementsOn
+        dtype: !ListParameter
           name: MeasurementList
           dtype: str
           max_dim_x: 3
         doc: List of Measurements turned on
         label: On Measurements
-    - OFF:
+    - false:
       - ALL:
         - !Command
-          name: all_measurements_off
-          dtype_in: None
-          dtype_out: None
+          name: AllMeasurementsOff
+          dtype_in: null
+          dtype_out: null
     - STAT:
       - !Command
-        name: is_measured
+        name: IsMeasured
         dtype_in: str
-        doc_in: Measurement function (VOLT, CURR, RES)
         dtype_out: bool
+        doc_in: Measurement function (VOLT, CURR, RES)
         doc_out: Is the measirement function active T/F
   - CURR:
     - RANG:
       - !Attribute
-        name: i_sense_range
+        name: iSenseRange
         dtype: float
         doc: Range level for current measurements.
         label: I Range
@@ -284,13 +271,12 @@
         range: (0.0,1.0)
       - AUTO:
         - !Attribute
-          name: i_sense_autorange
+          name: iSenseAutorange
           dtype: bool
           doc: Auto range for current measurements.
-          labels: Autorange I
         - LLIM:
           - !Attribute
-            name: i_sense_autorange_limit
+            name: iSenseAutorangeLimit
             dtype: float
             doc: Limit for autoranging current
             label: I Autorange limit
@@ -298,7 +284,7 @@
             range: (0.0,1.0)
     - NPLC:
       - !Attribute
-        name: i_sense_nplc
+        name: iSenseNplc
         dtype: float
         doc: Number of power line cycles to measure current for.
         label: NPLC
@@ -307,7 +293,7 @@
     - PROT:
       - LEV:
         - !Attribute
-          name: i_compliance
+          name: iCompliance
           dtype: float
           doc: The current compliance when operating as a voltage source
           label: Compliance (I)
@@ -315,15 +301,14 @@
           range: (1.0E-6,1.0)
       - TRIP:
         - !Attribute
-          name: in_i_compliance
+          name: inICompliance
           dtype: bool
-          ddc: Is the source in current compliance?
           label: I limited
-          write: False
+          write: false
   - VOLT:
     - RANG:
       - !Attribute
-        name: v_sense_range
+        name: vSenseRange
         dtype: float
         doc: Range level for voltage measurements.
         label: V Range
@@ -331,13 +316,12 @@
         range: (0.0,105.0)
       - AUTO:
         - !Attribute
-          name: v_sense_autorange
+          name: vSenseAutorange
           dtype: bool
           doc: Auto range for voltage measurements.
-          labels: Autorange V
         - LLIM:
           - !Attribute
-            name: v_sense_autorange_limit
+            name: vSenseAutorangeLimit
             dtype: float
             doc: Limit for autoranging voltage
             label: V Autorange limit
@@ -345,7 +329,7 @@
             range: (0.0,105.0)
     - NPLC:
       - !Attribute
-        name: v_sense_nplc
+        name: vSenseNplc
         dtype: float
         doc: Number of power line cycles to measure voltage for.
         label: NPLC
@@ -354,7 +338,7 @@
     - PROT:
       - LEV:
         - !Attribute
-          name: v_compliance
+          name: vCompliance
           dtype: float
           doc: The voltage compliance when operating as a current source
           label: Compliance (V)
@@ -362,15 +346,14 @@
           range: (1.0E-3,105.0)
       - TRIP:
         - !Attribute
-          name: in_v_compliance
+          name: inVCompliance
           dtype: bool
-          ddc: Is the source in voltage compliance?
           label: V Limited
-          write: False
+          write: false
   - RES:
     - RANG:
       - !Attribute
-        name: r_sense_range
+        name: rSenseRange
         dtype: float
         doc: Range level for resistance measurements.
         label: R Range
@@ -378,13 +361,12 @@
         range: (0.0,2E18)
       - AUTO:
         - !Attribute
-          name: r_sense_autorange
+          name: rSenseAutorange
           dtype: bool
           doc: Auto range for resistance measurements.
-          labels: Autorange R
         - LLIM:
           - !Attribute
-            name: r_sense_autorange_lower_limit
+            name: rSenseAutorangeLowerLimit
             dtype: float
             doc: Lower Limit for autoranging resistance
             label: R Autorange lower limit
@@ -392,7 +374,7 @@
             range: (0.0,2E18)
         - ULIM:
           - !Attribute
-            name: r_sense_autorange_upper_limit
+            name: rSenseAutorangeUpperLimit
             dtype: float
             doc: Upper Limit for autoranging resistance
             label: R Autorange upper limit
@@ -400,16 +382,15 @@
             range: (0.0,2E18)
     - NPLC:
       - !Attribute
-        name: r_sense_nplc
+        name: rSenseNplc
         dtype: float
         doc: Number of power line cycles to measure resistance for.
         label: NPLC
         unit: plc
     - MODE:
       - !Attribute
-        name: r_sense_mode
-        dtype: 
-          !ENUM
+        name: rSenseMode
+        dtype: !ENUM
           name: RSenseMode
           values:
             AUTO: 1
@@ -418,41 +399,37 @@
         label: R Sense Mode
     - OCOM:
       - !Attribute
-        name: r_sense_offset_compensation
+        name: rSenseOffsetCompensation
         dtype: bool
         doc: Whether the resistance offset compensation is on or off.
         label: Offset Compensation
 - FORM:
   - SREG:
     - !Attribute
-      name: status_register_format
-      dtype:
-        !ENUM
+      name: statusRegisterFormat
+      dtype: !ENUM
         name: StatusRegisterFormat
         values:
           ASC: 0
+          BIN: 3
           HEX: 1
           OCT: 2
-          BIN: 3
       doc: Data Format for reading status event registers.
       label: Status Register format
   - DATA:
     - !Attribute
-      name: data_format
-      dtype:
-        !ENUM
+      name: dataFormat
+      dtype: !ENUM
         name: DataFormat
         values:
           ASC: 0
           REAL,32: 1
           SRE: 2
-      docs: Format for reporting data
       label: Data Format
   - BORD:
     - !Attribute
-      name: data_byte_order
-      dtype:
-        !ENUM
+      name: dataByteOrder
+      dtype: !ENUM
         name: ByteOrder
         values:
           NORM: 0
@@ -461,19 +438,17 @@
       label: Byte Order
   - ELEM:
     - !Attribute
-      name: data_elements
-      dtype:
-        !ListParameter
+      name: dataElements
+      dtype: !ListParameter
         name: DataElementList
-        dtype:
-          !ENUM
+        dtype: !ENUM
           name: DataElement
           values:
-            VOLT: 0
             CURR: 1
             RES: 2
-            TIME: 3
             STAT: 4
+            TIME: 3
+            VOLT: 0
         max_dim_x: 5
       doc: Set the elements of the data to be returned
       label: Data Elements
@@ -481,8 +456,7 @@
   - TERM:
     - !Attribute
       name: terminals
-      dtype:
-        !ENUM
+      dtype: !ENUM
         name: Terminals
         values:
           FRON: 0
@@ -490,63 +464,59 @@
 - SYST:
   - RSEN:
     - !Attribute
-     name: four_terminal
-     dtype: bool
-     doc: Enable remote sense mode?
-     label: 4-Terminal
+      name: fourTerminal
+      dtype: bool
+      doc: Enable remote sense mode?
+      label: 4-Terminal
   - BEEP:
     - STAT:
       - !Attribute
-        name: beeper_on
+        name: beeperOn
         dtype: bool
         doc: Enable system beeper
         label: Beeper On
 - OUTP:
   - STAT:
     - !Attribute
-      name: output_on
+      name: outputOn
       dtype: bool
       doc: Turn the output on or off
-      label: 'Output?'
+      label: Output?
   - INT:
     - STAT:
       - !Attribute
-        name: output_interlock_on
+        name: outputInterlockOn
         dtype: bool
         doc: Enable the hardware intrerlock
-        label: 'Output Interlock?'
+        label: Output Interlock?
   - SMOD:
     - !Attribute
-      name: output_off_state
-      dtype:
-        !ENUM
+      name: outputOffState
+      dtype: !ENUM
         name: OutptuOffState
         values:
-          NORM: 0
-          HIMP: 1
-          ZERO: 2
           GUAR: 3
+          HIMP: 1
+          NORM: 0
+          ZERO: 2
       doc: Control, the impedance of the smu when it is off
       label: Output Off State
-      
 - TRAC:
   - FEED:
     - !Attribute
-      name: buffer_feed
-      dtype:
-        !ENUM
+      name: bufferFeed
+      dtype: !ENUM
         name: BufferFeed
         values:
-          SENS1: 0
           CALC1: 1
           CALC2: 2
+          SENS1: 0
       doc: Source for buffer readings
       label: Buffer Feed
     - CONT:
       - !Attribute
-        name: buffer_on
-        dtype:
-          !ENUM
+        name: bufferOn
+        dtype: !ENUM
           name: BufferControl
           values:
             NEV: 0
@@ -555,35 +525,31 @@
         label: Buffer Control
   - POIN:
     - !Attribute
-      name: buffer_size
+      name: bufferSize
       dtype: int
-      range: (1,2500)
       doc: Size of buffer
       label: Buffer Size
+      range: (1,2500)
     - ACT:
       - !Attribute
-        name: buffer_points
+        name: bufferPoints
         dtype: int
-        write: False
         doc: Actual number of points in the buffer
         label: Buffer Points
+        write: false
   - FREE:
     - !Attribute
-      name: buffer_memory
-      dtype:
-        !ListParameter
+      name: bufferMemory
+      dtype: !ListParameter
         name: BufferMemory
         dtype: int
         max_dim_x: 2
-      write: False
       doc: Buffer memory free and used
       label: Buffer Memmory
+      write: false
   - CLE:
     - !Command
-      name: clear_buffer
-      dtype_in: None
-      dtype_out: None
+      name: ClearBuffer
+      dtype_in: null
+      dtype_out: null
       doc: Clear the buffer
-
-        
-        

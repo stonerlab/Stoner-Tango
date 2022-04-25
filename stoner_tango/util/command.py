@@ -28,8 +28,29 @@ for k,v in __builtins__.items():
         BUILTIN_NAMES[v]=k
     except TypeError:
         pass
-    
+
 _enum_types={}
+
+def tangoify_name(name,command=False):
+    """Convert a name to a tango compliant name.
+
+    Args:
+        name (str):
+            attribute name that might be in snake_case
+
+    Keyword Args:
+        command (bool):
+            Set True if *name* is a tango Command.
+
+    Tango attributes are in camelCase by convention whilst commands are in CamelCase. This function
+    if written to help ensure that if a yaml file of instrument commands and attributes is being written,
+    that the name conforms to the usual convention.
+    """
+    parts=name.split("_")
+    start=0 if command else 1
+    for ix,part in enumerate(parts[start:],start=start):
+        parts[ix]=part.title()
+    return "".join(parts)
 
 @dataclass
 class ListParameter:
@@ -44,7 +65,12 @@ class ListParameter:
     delimiter:str=","
 
     def __post_init__(self):
-        """Ensure consistency of dimensions."""
+        """Ensure consistency of dimensions.
+
+        Raises:
+            ValueError:
+                If the max_dim_x and max_dim_y are not consistent with the dims parameters.
+        """
         if not 1<=self.dims<=2:
             raise ValueError("Only 1D or 2D datasets can be specified!")
         if self.dims==1 and (self.max_dim_x<2 or self.max_dim_y>0):
@@ -52,7 +78,7 @@ class ListParameter:
         if self.dims==2 and self.max_dim_x*self.max_dim_y<=1:
             raise ValueError("Cannot have a image attrivute that is scalar!")
         self.__name__=self.name
-            
+
     def __call__(self,value):
         """Make the ListParameter callable to do a type conversion using it's own dtype."""
         return self.dtype(value)
@@ -71,10 +97,17 @@ class ListParameter:
         """
         out={}
         for f in fields(self):
+            if f.default==getattr(self,f.name) or (f.default is None and getattr(self,f.name) is None):
+                continue
             out[f.name]=getattr(self,f.name)
         for k in out:
             if callable(out[k]):
-                out[k]=k.__name__
+                if isinstance(out[k],(enum.EnumMeta, ListParameter)):
+                    continue
+                try:
+                    out[k]=k.__name__
+                except AttributeError:
+                    out[k]=BUILTIN_NAMES.get(out[k],None)
         return out
 
     @classmethod
@@ -166,13 +199,21 @@ class AttributeItem:
         """
         out={}
         for f in fields(self):
+            if f.default==getattr(self,f.name) or (f.default is None and getattr(self,f.name) is None):
+                continue
+            if f.name in ["reader","writer"] and getattr(self,f.name) in [self.default_reader,self.default_writer]:
+                continue
             out[f.name]=getattr(self,f.name)
         for k in out:
+            if isinstance(out[k],(enum.EnumMeta, ListParameter)):
+                continue
             if callable(out[k]):
                 try:
                     out[k]=k.__name__
                 except AttributeError:
                     out[k]=BUILTIN_NAMES.get(out[k],None)
+            if k=="name":
+                out[k]=tangoify_name(out[k])
         return out
 
     @classmethod
@@ -215,7 +256,22 @@ class AttributeItem:
         return f"AttributeItem({values})"
 
     def default_reader(self,value,dtype=None):
-        """Default implementation to convert a string to value of correct type."""
+        """Default implementation to convert a string to value of correct type.
+
+        Args:
+            value (str):
+                String representation of the value as read from the instrument.
+
+        Keyword Args:
+            dtype (type, None):
+                Type to try and convert data to.
+
+        Returns:
+            (Any):
+                The value as the correct python type.
+
+        Does a series of checks to try and convert the value nicely to the correct dtype.
+        """
         if dtype is None:
             dtype=self.dtype
         value=value.strip("\"\'")
@@ -236,11 +292,24 @@ class AttributeItem:
         return dtype(value)
 
     def default_writer(self, value):
-        """Convert a value to a string."""
+        """Convert a value to a string.
+
+        Args:
+            value (Any):
+                Value to convert to a string.
+
+        Returns:
+            str:
+                Value represented nicely for writing to a SCPI instrument as string.
+
+        Carry out the necessary formatting to make the value a string suitabel for a SCPI instrument to understand.
+        Strings are quoted in '"', Enums are converted to a bare identifier label, booleans are converted to ON or OFF,
+        and floating point numbers are suitably converted.
+        """
         if isinstance(self.dtype,ListParameter) and isinstance(value, Iterable) and not isinstance(value,str):
             if issubclass(self.dtype.dtype,enum.Enum): # special adaptation for Enum's
                 ret= self.dtype.delimiter.join([self.dtype.dtype(v).name for v in value])
-                return ret                
+                return ret
             return self.dtype.delimiter.join([self.default_writer(v) for v in value])
         if isinstance(self.dtype, type) and issubclass(self.dtype,enum.Enum):
             if isinstance(value,int):
@@ -355,13 +424,22 @@ class CommandItem:
         """
         out={}
         for f in fields(self):
+            if f.default==getattr(self,f.name) or (f.default is None and getattr(self,f.name) is None):
+                continue
+            if f.name in ["reader","writer"] and getattr(self,f.name) in [self.default_reader,self.default_writer]:
+                continue
             out[f.name]=getattr(self,f.name)
         for k in out:
             if callable(out[k]):
+                if isinstance(out[k],(enum.EnumMeta, ListParameter)):
+                    continue
                 try:
                     out[k]=k.__name__
                 except AttributeError:
                     out[k]=BUILTIN_NAMES.get(out[k],None)
+            if k=="name":
+                out[k]=tangoify_name(out[k],command=True)
+
         return out
 
     @classmethod
@@ -404,7 +482,22 @@ class CommandItem:
         return f"CommandItem({values})"
 
     def default_reader(self,value,dtype=None):
-        """Default implementation to convert a string to value of correct type."""
+        """Default implementation to convert a string to value of correct type.
+
+        Args:
+            value (str):
+                String representation of the value as read from the instrument.
+
+        Keyword Args:
+            dtype (type, None):
+                Type to try and convert data to.
+
+        Returns:
+            (Any):
+                The value as the correct python type.
+
+        Does a series of checks to try and convert the value nicely to the correct dtype.
+        """
         if dtype is None:
             dtype=self.dtype_out
         value=value.strip("\"\'")
@@ -425,11 +518,24 @@ class CommandItem:
         return dtype(value)
 
     def default_writer(self, value):
-        """Convert a value to a string."""
+        """Convert a value to a string.
+
+        Args:
+            value (Any):
+                Value to convert to a string.
+
+        Returns:
+            str:
+                Value represented nicely for writing to a SCPI instrument as string.
+
+        Carry out the necessary formatting to make the value a string suitabel for a SCPI instrument to understand.
+        Strings are quoted in '"', Enums are converted to a bare identifier label, booleans are converted to ON or OFF,
+        and floating point numbers are suitably converted.
+        """
         if isinstance(self.dtype_in,ListParameter) and isinstance(value, Iterable) and not isinstance(value,str):
             if issubclass(self.dtype_in.dtype,enum.Enum): # special adaptation for Enum's
                 ret= self.dtype_in.delimiter.join([self.dtype_in.dtype(v).name for v in value])
-                return ret                
+                return ret
             return self.dtype_in.delimiter.join([self.default_writer(v) for v in value])
         if isinstance(self.dtype_in, type) and issubclass(self.dtype_in,enum.Enum):
             if isinstance(value,int):
@@ -472,7 +578,7 @@ class CommandItem:
             setattr(cls,f"Enum{self.dtype_in.__name__}", self.dtype_in)
         if isinstance(self.dtype_out,type) and issubclass(self.dtype_out,enum.Enum):
             setattr(cls,f"Enum{self.dtype_out.__name__}", self.dtype_out)
-        
+
 
         # Build the arguments for the tango.server.attribute call
 

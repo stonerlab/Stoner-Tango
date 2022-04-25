@@ -2,69 +2,69 @@
   - OPER:
     - ENAB:
       - !Attribute
-        name: operation_status_enable
+        name: operationStatusEnable
         dtype: int
         doc: Read/write the operational status enable register.
         label: OP Status Emable
         range: (0,65535)
     - COND:
       - !Attribute
-        name: operation_status_condition
+        name: operationStatusCondition
         dtype: int
         doc: Read the operational status condition register.
         label: OP Status condition
-        write: False
+        write: false
     - EVEN:
       - !Attribute
-        name: operation_status_event
+        name: operationStatusEvent
         dtype: int
         doc: Read the operational status condition register.
         label: OP Status Event
-        write: False
+        write: false
   - MEAS:
     - ENAB:
       - !Attribute
-        name: measurement_status_enable
+        name: measurementStatusEnable
         dtype: int
         doc: Read/write the measurement status enable register.
         label: Measurement Status Emable
         range: (0,65535)
     - COND:
       - !Attribute
-        name: measurement_status_condition
+        name: measurementStatusCondition
         dtype: int
         doc: Read the measurement status condition register.
         label: Measurement Status condition
-        write: False
+        write: false
     - EVEN:
       - !Attribute
-        name: measurement_status_event
+        name: measurementStatusEvent
         dtype: int
         doc: Read the measurement status condition register.
         label: Measurement Status Event
-        write: False
+        write: false
   - QUES:
     - ENAB:
       - !Attribute
-        name: questionable_status_enable
+        name: questionableStatusEnable
         dtype: int
         doc: Read/write the questionable status enable register.
         label: Questionable Status Emable
         range: (0,65535)
     - COND:
       - !Attribute
-        name: questionable_status_condition
+        name: questionableStatusCondition
         dtype: int
         doc: Read the questionable status condition register.
         label: Questionable Status condition
-        write: False
+        write: false
     - EVEN:
       - !Attribute
-        name: questionable_status_event
+        name: questionableStatusEvent
         dtype: int
         doc: Read the questionable status condition register.
         label: Questionable Status Event
-        write: False
+        write: false
 - SYST:
   - VERS:
     - !Attribute
@@ -72,5 +72,4 @@
       dtype: str
       doc: Get the system version number.
       label: Version
-      write: False
-
+      write: false
