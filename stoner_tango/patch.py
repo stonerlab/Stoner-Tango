@@ -25,6 +25,9 @@ def is_tango_object(arg):
 
 server.is_tango_object=is_tango_object
 
+
+##### DeviceProxy patching
+
 devprox_read_pipe=tango.device_proxy.__DeviceProxy__read_pipe
 devprox_write_pipe=tango.device_proxy.__DeviceProxy__write_pipe
 
