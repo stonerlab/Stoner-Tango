@@ -24,17 +24,17 @@ class VISAInstrument(BaseDevice):
     
     """A Device class that represent a basic VISA instrument that can be communicated with over a VISA comms channel."""
 
-    name = device_property(str, doc="VISA Resource name",
+    Resource = device_property(str, doc="VISA Resource name",
                            default_value="GPIB0::10::INSTR",
                            update_db = True)
-    sleep = device_property(float, doc="Wait time after sending commands",
+    Sleep = device_property(float, doc="Wait time after sending commands",
                             default_value=0.1,
                             update_db=True)
 
     def __init__(self, *args, **kargs):
         """Construct the device server process."""
         super().__init__(*args)
-        self.transport=GPIBTransport(self, name=self.name, sleep=self.sleep)
+        self.transport=GPIBTransport(self, name=self.Resource, sleep=self.Sleep)
         self._debug = False
 
     @property
@@ -70,7 +70,7 @@ class VISAInstrument(BaseDevice):
     #### Basic comms commands for interacting with the instrument, Mainly for debugging.
         
     @command
-    def read(self):
+    def Read(self):
         """Read data from instrument using the proptocol and transport.
         
         Returns:
@@ -79,7 +79,7 @@ class VISAInstrument(BaseDevice):
         return self.protocol.read()
     
     @command
-    def write(self,data):
+    def Write(self,data):
         """Weite data to instrument using the protocol and transport.
         
         Args:
@@ -92,7 +92,7 @@ class VISAInstrument(BaseDevice):
         return self.protocol.write(data)
     
     @command
-    def query(self, data):
+    def Query(self, data):
         """Do a write-read cycle with the instrument using protocol and transport.
         
         Args:
@@ -112,7 +112,7 @@ class IEEE488_2(VISAInstrument):
 
 
     @attribute
-    def get_scpi_attrs(self):
+    def getScpiAttrs(self):
         """Get the tree of attributes generated from SCPI commands.
 
         Returns:
@@ -123,7 +123,7 @@ class IEEE488_2(VISAInstrument):
         return pformat(scpi_attrs)
 
     @attribute
-    def get_scpi_cmds(self):
+    def getScpiCmds(self):
         """Get th dictionary of SCPI Commands implemented as attributes.
 
         Returns:
@@ -148,7 +148,7 @@ class SCPI(IEEE488_2):
         self.protocol = SCPIProtocol(self.transport)
 
     @tango.server.pipe
-    def next_error(self):
+    def nextError(self):
         """Read the enxt werror message from the queue.
 
         Returns:

@@ -553,3 +553,246 @@
       dtype_in: null
       dtype_out: null
       doc: Clear the buffer
+- SOUR:
+  - CLE:
+    - IMM:
+      - !Command
+        name: ClearSource
+        dtype_in: null
+        dtype_out: null
+        doc: Turn the source off
+    - AUTO:
+      - !Attribute
+        name: sourceAutoClear
+        dtype: bool
+        doc: Automatically clear source
+        label: Auto Clear Source
+      - MODE:
+        - !Attribute
+          name: sourceAutoClearMode
+          dtype: !ENUM
+            name: SourceAutoClearMode
+            values:
+              ALW: 0
+              TCO: 1
+          doc: When to auto clear the source
+          label: Source Auto Clear Mode
+  - FUNC:
+    - MODE:
+      - !Attribute
+        name: sourceFunction
+        dtype: !ENUM
+          name: SourceFunction
+          values:
+            VOLT: 0
+            CURR: 1
+            MEM: 2
+        doc: Source output function
+        label: Source Function
+  - DEL:
+    - !Attribute
+      name: sourceDelay
+      dtype: float
+      range: (0.0,9999.999)
+      doc: Settle time for source
+      label: Source Delay
+    - AUTO:
+      - !Attribute
+        name: sourceDelayAuto
+        dtype: bool
+        doc: Automatically set Source delay
+        label: Source Auto Delay
+  - CURR:
+    - RANG:
+      - !Attribute
+        name: iSourceRange
+        dtype: float
+        range: (0,1.05)
+        doc: Output current range
+        label: Source Current Range
+      - AUTO:
+        - !Attribute
+          name: iSourceAutorange
+          dtype: bool
+          doc: Autorange the output current
+          label: Source Current Autorange
+    - MODE:
+      - !Attribute
+        name: iSourceMode
+        dtype: !ENUM
+          name: SourceMode
+          values:
+            FIX: 0
+            LIST: 1
+            SWE: 2
+        doc: Current Source mode
+        label: Source Mode
+    - AMPL:
+      - !Attribute
+        name: iSourceLevel
+        dtype: float
+        range: (-1.05,1.05)
+        doc: Source fixed current level
+        label: Source Current Level
+      - TRIG:
+        - AMPL:
+          - !Attribute
+            name: iSourceLevelTriggered
+            dtype: float
+            range: (-1.05,1.05)
+            doc: Source fixed current level when triggered
+            label: Source Current Level
+    - STAR:
+      - !Attribute
+        name: iSweepStart
+        dtype: float
+        range: (-210,210)
+        doc: Start value for a source sweep
+        label: I Sweep Start
+    - STOP:
+      - !Attribute
+        name: iSweepStop
+        dtype: float
+        range: (-1.05,1.05)
+        doc: End value for a source sweep
+        label: I Sweep Stop
+    - CENT:
+      - !Attribute
+        name: iSweepCentre
+        dtype: float
+        range: (-1.05,1.05)
+        doc: Centre value for a source sweep
+        label: I Sweep Centre
+    - SPAN:
+      - !Attribute
+        name: iSweepSpan
+        dtype: float
+        range: (-1.05,1.05)
+        doc: Span for a source sweep
+        label: I Sweep Span
+    - STEP:
+      - !Attribute
+        name: iSweepStep
+        dtype: float
+        range: (-2.1,2.1)
+        doc: Current Sweep step size
+        label: I Sweep Step
+  - VOLT:
+    - RANG:
+      - !Attribute
+        name: vSourceRange
+        dtype: float
+        range: (0,210)
+        doc: Output voltage range
+        label: Source Voltage Range
+      - AUTO:
+        - !Attribute
+          name: vSourceAutorange
+          dtype: bool
+          doc: Autorange the output voltage
+          label: Source Voltage Autorange
+    - MODE:
+      - !Attribute
+        name: vSourceMode
+        dtype: !ENUM
+          name: SourceMode
+        doc: Voltage Source mode
+        label: Source Mode
+    - AMPL:
+      - !Attribute
+        name: vSourceLevel
+        dtype: float
+        range: (-210.,210.)
+        doc: Source fixed voltage level
+        label: Source Voltage Level
+      - TRIG:
+        - AMPL:
+          - !Attribute
+            name: vSourceLevelTriggered
+            dtype: float
+            range: (-210.,210.)
+            doc: Source fixed voltage level when triggered
+            label: Source Voltage Level
+    - PROT:
+      - !Attribute
+        name: sourceProtection
+        dtype: float
+        range: (0,210.)
+        doc: Set source voltage protection limit
+        label: Source Voltage Limit
+    - STAR:
+      - !Attribute
+        name: vSweepStart
+        dtype: float
+        range: (-210,210)
+        doc: Start value for a source sweep
+        label: V Sweep Start
+    - STOP:
+      - !Attribute
+        name: vSweepStop
+        dtype: float
+        range: (-210,210)
+        doc: End value for a source sweep
+        label: V Sweep Stop
+    - CENT:
+      - !Attribute
+        name: vSweepCentre
+        dtype: float
+        range: (-210,210)
+        doc: Centre value for a source sweep
+        label: V Sweep Centre
+    - SPAN:
+      - !Attribute
+        name: vSweepSpan
+        dtype: float
+        range: (-210,210)
+        doc: Span for a source sweep
+        label: V Sweep Span        
+    - STEP:
+      - !Attribute
+        name: vSweepStep
+        dtype: float
+        range: (-420,420)
+        doc: Voltage Sweep step size
+        label: V Sweep Step
+  - SWE:
+    - RANG:
+      - !Attribute
+        name: sweepRanging
+        dtype: !ENUM
+          name: SourceSweepRanging
+          values:
+            BEST: 0
+            AUTO: 1
+            FIX: 2
+        doc: How to range the source when sweeping
+        label: Sweep Source Ranging
+    - SPAC:
+      - !Attribute
+        name: sweepSpacing
+        dtype: !ENUM
+          name: SourceSweepSpacing
+          values:
+            LIN: 0
+            LOG: 1
+    - POIN:
+      - !Attribute
+        name: sweepPoints
+        dtype: int
+        range: (1,2500)
+        doc: Number of points in a source sweep
+        label: Sweep Points
+    - DIR:
+      - !Attribute
+        name: sweepDirection
+        dtype: !ENUM
+          name: SweepDirection
+          values:
+            UP: 0
+            DOWN: 1
+        doc: Direction to perform the sweep in
+        label: Sweep Direction
+        
+        
+                  
+              
