@@ -3,9 +3,12 @@
 Decorators to help write tango Devices
 """
 __all__=["attribute","command","SCPI_Instrument"]
+
+from dataclasses import make_dataclass, is_dataclass, fields
 from inspect import getsourcefile
 import pathlib
 import re
+import sys
 import yaml
 
 from asteval import Interpreter
@@ -21,6 +24,52 @@ range_pat=re.compile(r'range\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.
 warn_pat=re.compile(r'warn\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
 alarm_pat=re.compile(r'alarm\s*\((?P<low>[^\,]+)\,(?P<high>[^\)]+)\)', flags=re.IGNORECASE)
 return_pat=re.compile(r'((?P<label>.*)\s+in\s+(?P<unit>.*))|(?P<label2>.*)')
+
+FROM_TANGO_TYPE={}
+for k,v in tango.utils.TO_TANGO_TYPE.items():
+    if not isinstance(k,str) and "tango" not in k.__class__.__module__:
+        FROM_TANGO_TYPE[v]=k
+
+__module__=sys.modules["stoner_tango"]
+
+
+def convert(arg, to_tango=False):
+    """Try to convert the argument to/from a tango type."""
+    mapping=TO_TANGO_TYPE if to_tango else FROM_TANGO_TYPE
+    if arg in mapping:
+        return mapping[arg]
+    raise TypeError(f"Do not know how to convert type {arg}")
+
+def build_class(pipe_arg):
+    """Take the return data type if a pipe argument and convert it to a Python class."""
+    name,definition=pipe_arg
+    fields=[]
+    data={}
+    # Build a data dictionary and fields list
+    if isinstance(definition,(list,tuple)): #Long format
+        for fld in definition:
+            typ=convert(fld["dtype"], to_tango=False)
+            fields.append((fld["name"],typ))
+            data[fld["name"]]=typ(fld["value"])
+    elif isinstance(definition, dict): # Compact format
+        for fld,value in definition.items():
+            data[fld]=value
+            fields.append((name,type(value)))
+    cls=__module__.__dict__.get(name,None) # Try to class definition from this module
+    if cls is None or not isinstance(cls,type): # Need to make a new class
+        new_cls=make_dataclass(name, fields)
+        if cls is None: # If we're not colliding names, then put class into this module
+            __module__.__dict__[name]=new_cls
+        cls=new_cls
+    return cls(**data)
+
+def unbuild_class(pipe_arg):
+    """Convert pipe_arg from a dataclass to a pipe data structure."""
+    if is_dataclass(pipe_arg):
+        name=pipe_arg.__class__.__name__
+        values={f:getattr(pipe_arg,f) for f in fields(pipe_arg)}
+        pipe_arg=(name, values)
+    return pipe_arg
 
 ### Replacement decorators for tango.server
 
@@ -101,7 +150,21 @@ def pipe(f, **kargs):
             if dct["label"] is None:
                 dct["label"]=dct["label2"]
             kargs.setdefault("label",dct["label"])
-    return server.pipe(f,**kargs)
+    def unpack(*args,**kwargs):
+        for ix,arg in enumerate(args):
+            if isinstance(arg,tuple) and len(arg)==2:
+                args[ix]=build_class(arg)
+        return f(*args,**kwargs)
+    ret = server.pipe(unpack,**kargs)
+    original_write=ret.write
+    def writer(fset):
+        def fset_wrapped(*args,**kwargs):
+            for ix,arg in enumerate(args):
+                args[ix]=unbuild_class(arg)
+            return fset(args,**kwargs)
+        return original_write(fset_wrapped)
+    ret.write=writer
+    return ret
 
 def command(f, dtype_in=None,
             dformat_in=None,
@@ -113,7 +176,7 @@ def command(f, dtype_in=None,
             polling_period=None,
             green_mode=None):
     """Produces a tango.controls Device command using information from the docstring.
-    
+
     Uses the parameters from the doc string to determine the type and description of the input parameters and the
     return type and description for the output dtype and description.
     """
@@ -183,7 +246,7 @@ def SCPI_Instrument(cls):
     clspth=pathlib.Path(getsourcefile(cls.__mro__[0])).parent # This is horrible and due to how tango.server.Device works
 
     clsyaml=clspth/f"{cls.__name__}.yaml"
-    
+
     st_commands._enum_types={} # C
 
     if "scpi_attrs" not in cls.__dict__ and clsyaml.exists:
@@ -193,7 +256,7 @@ def SCPI_Instrument(cls):
         setattr(cls,"scpi_attrs", defined)
     else:
         scpi_attrs=getattr(cls,"scpi_attrs",[])
-        
+
     # cls._scpi_attrs is a mapping between the class attribute (tango attribute/command) and the SCPI command implemented
     # for debuggin purposes!
     _scpi_attrs=getattr(cls,"_scpi_attrs",{})
@@ -235,4 +298,3 @@ def _process_one(cls,item,cmd=""):
         cls._scpi_attrs[item.name]=cmd
     else:
         raise TypeError(f"Error defining scpi attributes with {item}")
-

@@ -16,12 +16,12 @@ from stoner_tango.instr.exceptions import CommandError
 
 
 class BaseDevice(Device):
-    
+
     """Very Base class of the stoner_tango Deivce Server classes."""
-    
-    
+
+
 class VISAInstrument(BaseDevice):
-    
+
     """A Device class that represent a basic VISA instrument that can be communicated with over a VISA comms channel."""
 
     Resource = device_property(str, doc="VISA Resource name",
@@ -65,40 +65,40 @@ class VISAInstrument(BaseDevice):
     @debug.write
     def debug(self, value):
         self._debug=bool(value)
-        
-        
+
+
     #### Basic comms commands for interacting with the instrument, Mainly for debugging.
-        
+
     @command
     def Read(self):
         """Read data from instrument using the proptocol and transport.
-        
+
         Returns:
             str: Instrument Response
         """
         return self.protocol.read()
-    
+
     @command
     def Write(self,data):
         """Weite data to instrument using the protocol and transport.
-        
+
         Args:
             data (str):
                 Instrument Command
-                
+
         Returns:
             int: Bytes sent to instrument.
         """
         return self.protocol.write(data)
-    
+
     @command
     def Query(self, data):
         """Do a write-read cycle with the instrument using protocol and transport.
-        
+
         Args:
             data (str):
                 Instrument Command
-                
+
         Returns:
             str: Instrument Response
         """
@@ -148,7 +148,7 @@ class SCPI(IEEE488_2):
         self.protocol = SCPIProtocol(self.transport)
 
     @tango.server.pipe
-    def nextError(self):
+    def NextError(self):
         """Read the enxt werror message from the queue.
 
         Returns:
