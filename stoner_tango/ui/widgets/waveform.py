@@ -15,6 +15,7 @@ class Waveform(QtWidgets.QWidget):
         self.waveform.currentIndexChanged.connect(self.redraw)
         self.waveform.currentIndexChanged.connect(self._sort_visibility)
         self.redraw()
+        self.setLayout(self.main_layout)
         self.show() # Show the GUI
 
     def _timebase(self):
@@ -34,6 +35,10 @@ class Waveform(QtWidgets.QWidget):
         self.amplitude_label.setText("End" if waveform=="Ramp" else "Amplitude")
         self.offset_label.setText("Start" if waveform=="Ramp" else "Offset")
 
+    def closeEvent(self, event):
+        """Catch the close event."""
+        print("Closed")
+        event.accept()
 
     def redraw(self):
         func=self.waveform.currentText().lower().replace("^","_")
@@ -91,15 +96,10 @@ class Waveform(QtWidgets.QWidget):
         y0=sawtooth(self._timebase(),width=0.5)
         return np.sign(y0)*y0**4*ammplitude+offset
 
-
-
-
-
-
-
-
-
 if __name__=="__main__":
-    app = QtWidgets.QApplication(sys.argv)
-    window = Waveform()
-    app.exec_()
+        if not QtWidgets.QApplication.instance():
+            app = QtWidgets.QApplication(sys.argv)
+            window = Waveform()
+            app.exec_()
+        else:
+            window = Waveform()
