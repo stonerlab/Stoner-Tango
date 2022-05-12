@@ -1,25 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>points_label</class>
- <widget class="QWidget" name="points_label">
+ <class>waveform_generator</class>
+ <widget class="QWidget" name="waveform_generator">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>456</width>
-    <height>639</height>
+    <width>278</width>
+    <height>252</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>273</width>
-     <height>371</height>
+     <width>277</width>
+     <height>269</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="main_layout" stretch="1,0">
@@ -35,6 +41,9 @@
         </property>
         <item>
          <layout class="QVBoxLayout" name="waveform_layout">
+          <property name="sizeConstraint">
+           <enum>QLayout::SetDefaultConstraint</enum>
+          </property>
           <item>
            <widget class="QLabel" name="waveform_label">
             <property name="text">
@@ -49,6 +58,12 @@
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>80</width>
+              <height>0</height>
+             </size>
             </property>
             <property name="font">
              <font>
