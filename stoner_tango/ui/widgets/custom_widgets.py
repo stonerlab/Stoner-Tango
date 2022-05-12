@@ -3,6 +3,7 @@
 Subclass the QDoubleSpinBox to allow custom format strings.
 """
 from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtCore import pyqtProperty
 import re
 from si_prefix import si_format, si_parse
 
@@ -12,13 +13,15 @@ class FormattedDoubleSpinBox(QtWidgets.QDoubleSpinBox):
     """A Double Precision SpinBox that allows a variety of formats."""
 
     fmt_string=re.compile(r'\%(?P<conv>[\#0_\s\+])?(?P<length>[0-9]+)?(\.(?P<precision>[0-9]+))?(?P<format>[diouxXeEfFgGp])')
+    reg_number=re.compile(r'\-?[0-9]+(\.[0-9]*)?(Ee]\-?[0-9]+)?')
+    si_number=re.compile(r'\-?[0-9]+(\.[0-9]*)?\s?[munpfazykMGTPEZY]?')
 
     def __init__(self, *args, **kargs):
         """Capture a format keyword argument."""
         self.format=kargs.pop("format","%.3p")
         super().__init__(*args,**kargs)
 
-    @property
+    @pyqtProperty(str)
     def format(self):
         return self._format
 
@@ -47,9 +50,9 @@ class FormattedDoubleSpinBox(QtWidgets.QDoubleSpinBox):
 
     def validate(self, text, pos):
         """Override input validation."""
-        print(text,pos)
         try:
-            self.valueFromText(text)
+            if self.reg_number.match(text) or self.si_number.match(text):
+                return (QtGui.QValidator.Acceptable, text, pos)
+            return (QtGui.QValidator.Intermediate, text, pos)
         except (ValueError,TypeError):
-            return QtGui.QValidator.Intermediate
-        return QtGui.QValidator.Acceptable
+            return (QtGui.QValidator.Intermediate, text, pos)

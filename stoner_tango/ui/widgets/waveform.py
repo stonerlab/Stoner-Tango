@@ -1,10 +1,14 @@
 from PyQt5 import QtWidgets, uic
+from PyQt5.QtCore import pyqtProperty, pyqtSignal
+
 from scipy.signal import sawtooth
 import pyqtgraph as pg
 import numpy as np
 import sys
 
 class Waveform(QtWidgets.QWidget):
+
+    valueChanged=pyqtSignal()
 
     def __init__(self):
         super().__init__() # Call the inherited classes __init__ method
@@ -14,9 +18,21 @@ class Waveform(QtWidgets.QWidget):
             part.valueChanged.connect(self.redraw)
         self.waveform.currentIndexChanged.connect(self.redraw)
         self.waveform.currentIndexChanged.connect(self._sort_visibility)
+        self._value=np.empty(0)
         self.redraw()
         self.setLayout(self.main_layout)
         self.show() # Show the GUI
+
+    @pyqtProperty(np.ndarray)
+    def value(self):
+        """Get our waveform from the widget."""
+
+    @value.setter
+    def value(self, data):
+        """Emit a signal when we change the data."""
+        self._value=data
+        self.valueChanged.emit()
+
 
     def _timebase(self):
         """Calculate the time values to feed into the waveform generation functions."""
@@ -54,7 +70,7 @@ class Waveform(QtWidgets.QWidget):
         self.display.plot(t,np.zeros_like(t),pen=pg.mkPen({"color":"#EEEE00","width":2.0}))
         self.display.getPlotItem().hideAxis('bottom')
         self.display.getPlotItem().hideAxis('left')
-        print("redraw event")
+        self.value=y
 
     def triangle(self):
         """Make a triangle wave."""
