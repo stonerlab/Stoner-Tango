@@ -6,13 +6,20 @@ import pyqtgraph as pg
 import numpy as np
 import sys
 
-class Waveform(QtWidgets.QWidget):
+class BaseWaveform(QtWidgets.QWidget):
 
     valueChanged=pyqtSignal()
 
     def __init__(self):
         super().__init__() # Call the inherited classes __init__ method
         uic.loadUi('waveform_generator.ui', self) # Load the .ui file
+
+class Waveform(BaseWaveform):
+
+    """Subclass the Base so we can add properties."""
+
+    def __init__(self,*args, **kargs):
+        super().__init__(*args,**kargs)
         for part in ["amplitude","offset","points","periods","phase"]:
             part=getattr(self,part)
             part.valueChanged.connect(self.redraw)
@@ -23,15 +30,28 @@ class Waveform(QtWidgets.QWidget):
         self.setLayout(self.main_layout)
         self.show() # Show the GUI
 
+
     @pyqtProperty(np.ndarray)
     def value(self):
         """Get our waveform from the widget."""
+        return self._value
 
     @value.setter
     def value(self, data):
         """Emit a signal when we change the data."""
         self._value=data
         self.valueChanged.emit()
+
+    @pyqtProperty(str)
+    def unit(self):
+        """The unit suffix string."""
+        return self.amplitude.suffix()
+
+    @unit.setter
+    def unit(self, value):
+        value=str(value)
+        self.amplitude.setSuffix(value)
+        self.offset.setSuffix(value)
 
 
     def _timebase(self):
@@ -119,3 +139,4 @@ if __name__=="__main__":
             app.exec_()
         else:
             window = Waveform()
+        window.unit="A"
