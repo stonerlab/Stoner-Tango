@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, uic
-from PyQt5.QtCore import pyqtProperty, pyqtSignal
+from PyQt5.QtCore import pyqtProperty, pyqtSignal, pyqtSlot
 
 from scipy.signal import sawtooth
 import pyqtgraph as pg
@@ -19,9 +19,47 @@ class Waveform(QtWidgets.QWidget):
         self.waveform.currentIndexChanged.connect(self.redraw)
         self.waveform.currentIndexChanged.connect(self._sort_visibility)
         self._value=np.empty(0)
+        self._x_axis=True
+        self._show_current_pos=False
+        self._position=-1
         self.redraw()
         self.setLayout(self.main_layout)
         self.show() # Show the GUI
+
+    @pyqtProperty(bool)
+    def show_position(self):
+        """Show the current position on the display."""
+        return self._show_current_pos
+
+    @show_position.setter
+    def show_position(self,value):
+        self._show_current_pos=bool(value)
+
+    @pyqtProperty(int)
+    def position(self):
+        """Return the current position marker location.
+
+        This is 0<=position<=value.size if value.size is not 0, otherwise -1."""
+        if self.value.size>0:
+            return max(0,min(self._position, self.value.size))
+        return -1
+
+    @position.setter
+    def position(self, value):
+        value=int(value)
+        if not 0<=value<self.value.size:
+            raise ValueError(f"{value} is oitside the range of posints in the waveform (0-{self.value.size-1})")
+        self._position=value
+
+
+    @pyqtProperty(bool)
+    def x_axis(self):
+        """Control whether the x_axis is displayed or not."""
+        return self._x_axis
+
+    @x_axis.setter
+    def x_axis(self,value):
+        self._x_axis=bool(value)
 
     @pyqtProperty(np.ndarray)
     def value(self):
@@ -33,6 +71,11 @@ class Waveform(QtWidgets.QWidget):
         self._value=data
         self.valueChanged.emit()
 
+
+    @pyqtSlot(int)
+    def upadtePosition(self,value):
+        """Slot for updating the current position marker."""
+        self.position=value
 
     def _timebase(self):
         """Calculate the time values to feed into the waveform generation functions."""
