@@ -11,6 +11,49 @@
     dtype_in: null
     dtype_out: null
     doc: Abort the source-measure cycle
+- FETC:
+  - !Command
+    name: Fetch
+    dtype_in: null
+    dtype_out: [float,]
+    reader: ExtractFloats
+    doc: Fetch a raw reading from the instrument
+- LAT:
+  - !Command
+    name: Latest
+    dtype_in: null
+    dtype_out: [float,]
+    reader: ExtractFloats
+    doc: Fetch the latest raw reading from the instrument
+- READ:
+  - !Command
+    name: ReadMeasurement
+    dtype_in: null
+    dtype_out: [float,]
+    reader: ExtractFloats
+    doc: Read a new measurement from the instrument
+- MEAS:
+  - CURR:
+    - !Command
+      name: MeasureCurrent
+      dtype_in: null
+      dtype_out: [float,]
+      reader: ExtractFloats
+      doc: Measure a raw Current reading from instrument
+  - VOLT:
+    - !Command
+      name: MeasureVoltage
+      dtype_in: null
+      dtype_out: [float,]
+      reader: ExtractFloats
+      doc: Measure a raw voltage reading from instrument
+  - RES:
+    - !Command
+      name: MeasureResistance
+      dtype_in: null
+      dtype_out: [float,]
+      reader: ExtractFloats
+      doc: Measure a raw resistance reading from instrument
 - ARM:
   - COUN:
     - !Attribute
@@ -747,7 +790,7 @@
         dtype: float
         range: (-210,210)
         doc: Span for a source sweep
-        label: V Sweep Span        
+        label: V Sweep Span
     - STEP:
       - !Attribute
         name: vSweepStep
@@ -792,7 +835,6 @@
             DOWN: 1
         doc: Direction to perform the sweep in
         label: Sweep Direction
-        
-        
-                  
-              
+
+
+

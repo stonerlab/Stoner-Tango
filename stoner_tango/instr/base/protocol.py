@@ -2,6 +2,7 @@
 """
 Protocol classes to ensure clean communications between the controller and instrument and error recovery.
 """
+from typing import Union
 import time
 import re
 
@@ -11,20 +12,20 @@ from .transport import BaseTransport, VisaTransport, GPIBTransport
 from ..exceptions import CommandError, NoDataError
 
 class Raw:
-    
+
     """Minimal data preparation and interpretation.
-    
+
     This protocol understands about termination characters and the need to set a rest period of time after writing to the isntrument
     before doing anything else.
-    
+
     Attributes:
-        
+
         terminator (str):
             Termination character(s) to append to the string.
         sleep (float):
             Time in seconds to wait after writing to the instrument.
     """
-    
+
     def __init__(self, transport, **kargs):
         """Setup the protocol class."""
         if not isinstance(transport, BaseTransport):
@@ -36,40 +37,43 @@ class Raw:
         for kw,val in kargs.items():
             if hasattr(self, kw):
                 setattr(self,kw,val)
-        
+
     def read(self,bytes:int=-1)->str:
         """Return the data from the instrument, stripping off the terminator."""
         data=self._transport.read(bytes).strip(self.terminator)
         return data
-    
+
     def write(self,data:str)->int:
         """Send data to the transport, sorting out terminator."""
-        ret = self._transport.write(data)   
+        ret = self._transport.write(data)
         time.sleep(self.sleep)
         return ret
 
     def readbytes(self,bytes:int)->bytes:
         """readbytes has to read a fixed number of bytes regardless of terminator presence."""
         return self._transport.readbytes(bytes)
-    
+
     def writebytes(self,data:bytes)->int:
         """Wraps the transport writebytes."""
         ret =  self._transport.writebytes(data)
         time.sleep(self.sleep)
         return ret
-    
-    def query(self,data,bytes=-1):
+
+    def query(self,data,bytes=-1, text=True)->Union[str,bytes]:
         """Back and forth transaction."""
         self.write(data)
-        return self.read(bytes)
+        if text:
+            return self.read(bytes)
+        return self.readbytes(bytes)
+
 
 
 class SCPIProtocol(Raw):
-    
+
     """A variant protocol for doing SCPI with error handling."""
-    
+
     err_pat=re.compile(r"(?P<code>[\-0-9]*),[\"\'](?P<msg>[^\"\']*)[\"\']")
-    
+
     def write(self,data:str)->int:
         """Check the status byte after writing to the intrument."""
         ret=super().write(data)
@@ -88,7 +92,7 @@ class SCPIProtocol(Raw):
                     err_code=float(match.groupdict()["code"])
                     err_msg=match.groupdict()["msg"]
                     print(f"SCPI Error: {error}", file=self._transport.log_debug)
-                    errs+=error                
+                    errs+=error
                     time.sleep(self.sleep)
                 self._transport.write("*CLS")
                 raise CommandError(data)
@@ -96,25 +100,32 @@ class SCPIProtocol(Raw):
                 self._transport.statu="OK"
                 self._transport.state=tango.DevState.ON
         return ret
-    
+
     def read(self, bytes:int=-1)->str:
         if hasattr(self._transport,"stb") and self._transport.stb & 16:
             return super().read(bytes)
         print(f"No message recieved available from {self._transport.name}", file=self._dev.log_debug)
         raise NoDataError("Failed to find any data to read.")
-        
-        
+
+    def readbytes(self,bytes:int)->bytes:
+        """readbytes has to read a fixed number of bytes regardless of terminator presence."""
+        if hasattr(self._transport,"stb") and self._transport.stb & 16:
+            return super().readbytes(bytes)
+        print(f"No message recieved available from {self._transport.name}", file=self._dev.log_debug)
+        raise NoDataError("Failed to find any data to read.")
+
+
 class OITraditional(Raw):
-    
+
     """This protocol class is designed for the Oxford Instruments Serial over GPIB patter. Every command repsons with a letter
     that matches the letter sent and signals an error with  a ?."""
-    
+
     def __init__(self, transport, **kargs):
         """Setup for the OI protocol. Force the terminator to be \r and set a sleep."""
         kargs.update({"terminator":"\r", "sleep":0.1})
         super().__init__(transport, **kargs)
         self._results=[]
-        
+
     def write(self, data:str):
         """All writes should have a read after them."""
         data=data.strip(self.terminator)+self.terminator
@@ -136,7 +147,7 @@ class OITraditional(Raw):
         self._transport.state=tango.DevState.ON
         self._transport.status="OK"
         return ret
-        
+
     def read(self, bytes:int=-1)->str:
         """Read the first response of the results stack."""
         if len(self._results)>0:
@@ -144,7 +155,6 @@ class OITraditional(Raw):
         self._transport.state=tango.DecState.ALARM
         self._transport.status="Tried reading more responses than stored."
         print("Tried reading more responses than stored.", file=self._dev.log_debug)
-        raise CommandError("Tried reading more responses than stored.")        
-        
-            
-    
+        raise CommandError("Tried reading more responses than stored.")
+
+
