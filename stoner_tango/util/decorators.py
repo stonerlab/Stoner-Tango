@@ -35,7 +35,7 @@ __module__=sys.modules["stoner_tango"]
 
 def convert(arg, to_tango=False):
     """Try to convert the argument to/from a tango type."""
-    mapping=TO_TANGO_TYPE if to_tango else FROM_TANGO_TYPE
+    mapping=tango.utils.TO_TANGO_TYPE if to_tango else FROM_TANGO_TYPE
     if arg in mapping:
         return mapping[arg]
     raise TypeError(f"Do not know how to convert type {arg}")
