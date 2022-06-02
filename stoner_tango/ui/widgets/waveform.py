@@ -6,13 +6,23 @@ import pyqtgraph as pg
 import numpy as np
 import sys
 
-class Waveform(QtWidgets.QWidget):
+class BaseWaveform(QtWidgets.QWidget):
 
     valueChanged=pyqtSignal()
 
     def __init__(self):
         super().__init__() # Call the inherited classes __init__ method
-        uic.loadUi('waveform_generator.ui', self) # Load the .ui file
+        try:
+            uic.loadUi('waveform_generator.ui', self) # Load the .ui file
+        except SystemError:
+            pass
+
+class Waveform(BaseWaveform):
+
+    """Subclass the Base so we can add properties."""
+
+    def __init__(self,*args, **kargs):
+        super().__init__(*args,**kargs)
         for part in ["amplitude","offset","points","periods","phase"]:
             part=getattr(self,part)
             part.valueChanged.connect(self.redraw)
@@ -64,6 +74,7 @@ class Waveform(QtWidgets.QWidget):
     @pyqtProperty(np.ndarray)
     def value(self):
         """Get our waveform from the widget."""
+        return self._value
 
     @value.setter
     def value(self, data):
@@ -71,6 +82,16 @@ class Waveform(QtWidgets.QWidget):
         self._value=data
         self.valueChanged.emit()
 
+    @pyqtProperty(str)
+    def unit(self):
+        """The unit suffix string."""
+        return self.amplitude.suffix()
+
+    @unit.setter
+    def unit(self, value):
+        value=str(value)
+        self.amplitude.setSuffix(value)
+        self.offset.setSuffix(value)
 
     @pyqtSlot(int)
     def upadtePosition(self,value):
@@ -102,7 +123,6 @@ class Waveform(QtWidgets.QWidget):
     def redraw(self):
         func=self.waveform.currentText().lower().replace("^","_")
         points=self.points.value()
-        periods=self.periods.value()
         t=np.linspace(0,points,points)
         if not hasattr(self,func):
             y=np.zeros_like(t)
@@ -110,10 +130,20 @@ class Waveform(QtWidgets.QWidget):
             y=getattr(self,func)()
             self.display.clear()
         self.display.plot(t,y)
-        self.display.plot(t,np.zeros_like(t),pen=pg.mkPen({"color":"#EEEE00","width":2.0}))
+        if self._x_axis:
+            self.display.plot(t,np.zeros_like(t),pen=pg.mkPen({"color":"#EEEE00","width":2.0}))
+        if self._show_current_pos:
+            self.display.plot(x=[t[self.position]],y=[self.value[self.position]], pen=None, symbol='o')
         self.display.getPlotItem().hideAxis('bottom')
         self.display.getPlotItem().hideAxis('left')
         self.value=y
+
+    def ramp(self):
+        """Simple ramp function."""
+        finish=self.amplitude.value()
+        start=self.offset.value()
+        return np.linspace(start,finish,int(self.points.value()),endpoint=True)
+
 
     def triangle(self):
         """Make a triangle wave."""
@@ -162,3 +192,6 @@ if __name__=="__main__":
             app.exec_()
         else:
             window = Waveform()
+        window.unit="A"
+        window.show_position=True
+        window.position=10
