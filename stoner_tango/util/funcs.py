@@ -5,7 +5,8 @@ Extra utility functions
 
 __all__=["sfmt"]
 import enum
-from typing import Any
+from typing import Any, Union
+import numpy as np
 
 def sfmt(value:Any)->str:
     """Fomat the value depending on the type."""
@@ -36,3 +37,11 @@ def ReadLargeAsInf(value):
     if res>1E10:
         return -1
     return int(res)
+
+def ExtractFloats(data:Union[str,bytes])->np.ndarray:
+    """Try to extract a numpy array from a SCPI data string."""
+    if len(data)>2 and data[:2]=="#0":
+        if not isinstance(data, bytes):
+            data=data.encode()
+        return np.frombuffer(data,dtype=np.float32)
+    return np.fromstring(data, dtype=np.float32,sep=",")
