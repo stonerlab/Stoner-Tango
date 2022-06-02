@@ -294,6 +294,7 @@ def _process_one(cls,item,cmd=""):
         for key,sub_item in item.items():
             _process_one(cls, sub_item,f"{cmd}:{key}")
     elif isinstance(item,(AttributeItem, CommandItem)): # Do the actualy construction of the attribute
+        cmd=cmd.replace("_","") # We can add extra _ to stop ON/OFF values being replaced with True/False
         item.adapat_tango_server(cls,cmd)
         cls._scpi_attrs[item.name]=cmd
     else:

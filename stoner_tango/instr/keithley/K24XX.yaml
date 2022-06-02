@@ -281,7 +281,7 @@
         dtype: bool
         doc: Enable concurrent measurements
         label: Concurrent Measurements
-    - ON:
+    - _ON:
       - !Attribute
         name: measurementsOn
         dtype: !ListParameter
@@ -290,7 +290,7 @@
           max_dim_x: 3
         doc: List of Measurements turned on
         label: On Measurements
-    - OFF:
+    - _OFF:
       - ALL:
         - !Command
           name: AllMeasurementsOff
