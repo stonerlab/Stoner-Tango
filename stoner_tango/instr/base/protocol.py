@@ -31,9 +31,9 @@ class Raw:
         if not isinstance(transport, BaseTransport):
             raise ValueError(f"transport parameter should be a BaseTransport instance not a {type(transport)}")
         self.terminator="\n"
-        self.sleep=0.0
         self._transport=transport
         self._dev=transport._dev
+        self.sleep=self._dev.get_property("sleep")
         for kw,val in kargs.items():
             if hasattr(self, kw):
                 setattr(self,kw,val)
@@ -56,6 +56,7 @@ class Raw:
     def writebytes(self,data:bytes)->int:
         """Wraps the transport writebytes."""
         ret =  self._transport.writebytes(data)
+
         time.sleep(self.sleep)
         return ret
 
@@ -156,5 +157,3 @@ class OITraditional(Raw):
         self._transport.status="Tried reading more responses than stored."
         print("Tried reading more responses than stored.", file=self._dev.log_debug)
         raise CommandError("Tried reading more responses than stored.")
-
-
