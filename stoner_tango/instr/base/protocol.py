@@ -33,7 +33,7 @@ class Raw:
         self.terminator="\n"
         self._transport=transport
         self._dev=transport._dev
-        self.sleep=self._dev.get_property("sleep")
+        self.sleep=self._dev.Sleep
         for kw,val in kargs.items():
             if hasattr(self, kw):
                 setattr(self,kw,val)
