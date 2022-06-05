@@ -126,8 +126,10 @@ def attribute(f, **kargs):
                 high=interp.eval(match.groupdict()["high"])
                 kargs.setdefault("min_alarm",low)
                 kargs.setdefault("max_alarm",high)
+    ret = server.attribute(f,**kargs)
+    ret.fget=f
+    return ret
 
-    return server.attribute(f,**kargs)
 
 def pipe(f, **kargs):
     """Produces a tnago controls Device pipe using information from a docstring.
@@ -152,6 +154,7 @@ def pipe(f, **kargs):
             kargs.setdefault("label",dct["label"])
     def unpack(*args,**kwargs):
         for ix,arg in enumerate(args):
+            args=list(args)
             if isinstance(arg,tuple) and len(arg)==2:
                 args[ix]=build_class(arg)
         return f(*args,**kwargs)
@@ -159,9 +162,10 @@ def pipe(f, **kargs):
     original_write=ret.write
     def writer(fset):
         def fset_wrapped(*args,**kwargs):
+            args=list(args)
             for ix,arg in enumerate(args):
                 args[ix]=unbuild_class(arg)
-            return fset(args,**kwargs)
+            return fset(*args,**kwargs)
         return original_write(fset_wrapped)
     ret.write=writer
     return ret

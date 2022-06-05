@@ -18,11 +18,11 @@ class DataBuffer:
 
     """Represents a data buffer."""
 
-    voltage:Optional[np.ndarray] = None
-    current:Optional[np.ndarray] = None
-    resistance:Optional[np.ndarray] = None
-    times:Optional[np.ndarray] = None
-    status:Optional[np.ndarray] = None
+    voltage:Optional[np.ndarray] = np.empty(0)
+    current:Optional[np.ndarray] = np.empty(0)
+    resistance:Optional[np.ndarray] = np.empty(0)
+    times:Optional[np.ndarray] = np.empty(0)
+    status:Optional[np.ndarray] = np.empty(0)
 
     def __init__(self,*args,**kargs):
         super().__init__(*args,**kargs)
@@ -59,7 +59,7 @@ class K24XX(SCPI):
         Args:
             DataBuffer: voltage or current readings to program.
         """
-        if data.voltage is not None:
+        if data.voltage is not None and data.voltage.size!=0:
             values=data.voltage
             mode="VOLT"
         else:
@@ -99,4 +99,6 @@ class Keithley24xx(tango.DeviceProxy):
 
 
 if __name__ == "__main__":
+    import sys
+    sys.argv.append("smu_1")
     K24XX.run_server()
