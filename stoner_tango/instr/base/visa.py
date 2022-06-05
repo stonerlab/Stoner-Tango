@@ -133,7 +133,26 @@ class IEEE488_2(VISAInstrument):
             scpi_attrs.update(cls.__dict__.get("_scpi_cmds",{}))
         return pformat(scpi_attrs)
 
+    @attribute
+    def stb(self):
+        """Get the Status Byte.
+
+        Returns:
+            int: Status Byte
+        """
+        if hasattr(self.transport,"stb"):
+            return self.transport.stb
+        return int(self.protocol.query("*STB?"))
+
     #### Implement IEEE488.2 Commands
+
+    def Reset_posthook(self,value):
+        """Clean up the status after reset."""
+        if self.stb&4==0 and self.state==tango.DevState.ALARM:
+            self.state=tango.DevState.ON
+        return value
+
+
 
 
 @SCPI_Instrument

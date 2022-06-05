@@ -71,13 +71,25 @@ class K24XX(SCPI):
             cmd=f":SOUR:LIST:{mode}{extra} {section}"
             self.protocol.wite(cmd)
 
+    def operationStatusCondition__posthook(self, value):
+        """Update status based on reading from event register."""
+        if value&1024:
+            self.state=tango.DevState.ON
+        if value&96:
+            self,state=tango.DevState.STANDBY
+        if value&84:
+            self.staate=tango.DevState.MOVING
+        return value
+
+
+
 class Keithley24xx(tango.DeviceProxy):
 
     """The client side class of a Keithley Source Meter."""
 
     def __init__(self,*args,**kargs):
         super().__init__(*args,**kargs)
-        if "Keithley Model 24" not in self.idn:
+        if "KEITHLEY INSTRUMENTS INC.,MODEL 24" not in self.idn:
             raise TypeError("This class can only support Keithley 24xx instruments")
 
 
