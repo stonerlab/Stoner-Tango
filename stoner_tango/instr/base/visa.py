@@ -148,7 +148,7 @@ class IEEE488_2(VISAInstrument):
 
     def Reset_posthook(self,value):
         """Clean up the status after reset."""
-        if self.stb&4==0 and self.state==tango.DevState.ALARM:
+        if self.stb()&4==0 and self.state==tango.DevState.ALARM:
             self.state=tango.DevState.ON
         return value
 
