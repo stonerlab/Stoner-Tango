@@ -161,6 +161,7 @@ class SCPI(IEEE488_2):
             return "Error",{"code":0,"message":error}
         err_code=int(match.groupdict()["code"])
         err_msg=match.groupdict()["msg"]
+        print(f"SCPI Error: {error}", file=self._transport.log_debug)
         return "Error",{"code":err_code,"message":err_msg}
 
 

@@ -7,6 +7,7 @@ from typing import Optional, Mapping
 
 import numpy as np
 
+import tango
 from tango.server import device_property
 from stoner_tango.instr.base import SCPI
 from stoner_tango.util.decorators import  SCPI_Instrument, pipe
@@ -32,9 +33,14 @@ class K24XX(SCPI):
 
     """Tango server class for a Keithley 24xx Source Meter."""
 
+    def __init__(self,*args,**kargs):
+        """Ensure we set our own description."""
+        super().__init__(*args,**kargs)
+        self.set_description(self.idn)
+
     @pipe
-    def read_buffer(self):
-        """Read the instrument's buffer.
+    def Waveform(self)->DataBuffer:
+        """Write a source waveform or read the buffer back gain.
 
         Returns:
             DataBuffer: voltage,current,resistance, readings."""
@@ -51,7 +57,31 @@ class K24XX(SCPI):
             ret.resistance=ret.voltage/ret.current
         return ret
 
+    @Waveform.fset
+    def Waveform(self,data:DataBuffer):
+        """Write a source waveform or read the buffer back gain.
 
+        Args:
+            DataBuffer: voltage or current readings to program.
+        """
+        if data.voltage is not None:
+            values=data.voltage
+            mode="VOLT"
+        else:
+            values=data.current
+            mode="CURR"
+        for i in range(int(np.ceil(values/100))):
+            section=",".join(values[i*100:(1+1)*100])
+            extra="" if i==0 else ":APP"
+            cmd=f":SOUR:LIST:{mode}{extra} {section}"
+            self.protocol.wite(cmd)
+
+class Keithley24xx(tango.DeviceProxy):
+
+    """The client side class of a Keithley Source Meter."""
+
+    def __init__(self,*args,**kargs):
+        super().__init__(*args,**kargs)
 
 
 
