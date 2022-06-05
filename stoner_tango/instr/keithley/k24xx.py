@@ -33,11 +33,6 @@ class K24XX(SCPI):
 
     """Tango server class for a Keithley 24xx Source Meter."""
 
-    def __init__(self,*args,**kargs):
-        """Ensure we set our own description."""
-        super().__init__(*args,**kargs)
-        self.set_description(self.idn)
-
     @pipe
     def Waveform(self)->DataBuffer:
         """Write a source waveform or read the buffer back gain.
@@ -57,7 +52,7 @@ class K24XX(SCPI):
             ret.resistance=ret.voltage/ret.current
         return ret
 
-    @Waveform.fset
+    @Waveform.write
     def Waveform(self,data:DataBuffer):
         """Write a source waveform or read the buffer back gain.
 
@@ -82,6 +77,10 @@ class Keithley24xx(tango.DeviceProxy):
 
     def __init__(self,*args,**kargs):
         super().__init__(*args,**kargs)
+        if "Keithley Model 24" not in self.idn:
+            raise TypeError("This class can only support Keithley 24xx instruments")
+
+
 
 
 
