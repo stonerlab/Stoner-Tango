@@ -153,8 +153,8 @@ def pipe(f, **kargs):
                 dct["label"]=dct["label2"]
             kargs.setdefault("label",dct["label"])
     def unpack(*args,**kwargs):
+        args=list(args)
         for ix,arg in enumerate(args):
-            args=list(args)
             if isinstance(arg,tuple) and len(arg)==2:
                 args[ix]=build_class(arg)
         return f(*args,**kwargs)
@@ -164,7 +164,8 @@ def pipe(f, **kargs):
         def fset_wrapped(*args,**kwargs):
             args=list(args)
             for ix,arg in enumerate(args):
-                args[ix]=build_class(arg)
+                if isinstance(arg,tuple) and len(arg)==2:
+                    args[ix]=build_class(arg)
             return fset(*args,**kwargs)
         return original_write(fset_wrapped)
     ret.write=writer

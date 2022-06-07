@@ -39,12 +39,12 @@ def new_read_pipe(self, pipe_name, extract_as=tango.ExtractAs.Numpy):
 def new_write_pipe(self, *args, **kwargs):
     """Patch in code to convet data classes to a pipe data structure in compact form."""
     args=list(args)
+    breakpoint()
     for ix,arg in enumerate(args):
         if dataclasses.is_dataclass(arg):
             data=dataclasses.asdict(arg)
             name=arg.__class__.__name__
             args[ix]=(name,data)
-    breakpoint()
     return devprox_write_pipe(self, *args, **kwargs)
 
 
