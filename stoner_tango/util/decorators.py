@@ -164,7 +164,7 @@ def pipe(f, **kargs):
         def fset_wrapped(*args,**kwargs):
             args=list(args)
             for ix,arg in enumerate(args):
-                args[ix]=unbuild_class(arg)
+                args[ix]=build_class(arg)
             return fset(*args,**kwargs)
         return original_write(fset_wrapped)
     ret.write=writer
